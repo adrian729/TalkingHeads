@@ -11,28 +11,20 @@
 //==============================================================================
 ParameterObject::ParameterObject() : parameterType(ParameterType::Float) {}
 
-ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType) :
-	parameter(parameter),
-	parameterType(parameterType),
-	smoothedVariable(SmoothingObject())
+ParameterObject::ParameterObject(juce::RangedAudioParameter *parameter, ParameterType parameterType) : parameter(parameter),
+																									   parameterType(parameterType),
+																									   smoothedVariable(SmoothingObject())
 {
 	// -- Update the inBound variables to initialize them
 	updateInBoundVariable();
 }
 
-ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, SmoothingType smoothingType, double sampleRate, double rampLengthInSeconds) :
-	parameter(parameter),
-	parameterType(ParameterType::Float), // If we have smoothing it must be a continuous parameter (float). If smoothing is not needed, use the other constructor
-	smoothedVariable(SmoothingObject(smoothingType, parameter->getNormalisableRange()))
+ParameterObject::ParameterObject(juce::RangedAudioParameter *parameter, SmoothingType smoothingType) : parameter(parameter),
+																									   parameterType(ParameterType::Float), // If we have smoothing it must be a continuous parameter (float). If smoothing is not needed, use the other constructor
+																									   smoothedVariable(SmoothingObject(smoothingType, parameter->getNormalisableRange()))
 {
-	// -- Setup smoothed variable
-	//smoothedVariable.reset(sampleRate, rampLengthInSeconds);
-
 	// -- Update the inBound variables to initialize them
 	updateInBoundVariable();
-
-	// -- Set the smoothed current value to the updated inBound variable
-	//smoothedVariable.setCurrentAndTargetValue(inBoundVariable);
 }
 
 ParameterObject::~ParameterObject()
@@ -42,7 +34,7 @@ ParameterObject::~ParameterObject()
 
 //==============================================================================
 // -- Parameter getters
-juce::RangedAudioParameter* ParameterObject::getParameter()
+juce::RangedAudioParameter *ParameterObject::getParameter()
 {
 	return parameter;
 }
@@ -52,24 +44,24 @@ ParameterType ParameterObject::getParameterType()
 	return parameterType;
 }
 
-juce::AudioParameterBool* ParameterObject::getParameterBool()
+juce::AudioParameterBool *ParameterObject::getParameterBool()
 {
-	return (juce::AudioParameterBool*)parameter;
+	return (juce::AudioParameterBool *)parameter;
 }
 
-juce::AudioParameterChoice* ParameterObject::getParameterChoice()
+juce::AudioParameterChoice *ParameterObject::getParameterChoice()
 {
-	return (juce::AudioParameterChoice*)parameter;
+	return (juce::AudioParameterChoice *)parameter;
 }
 
-juce::AudioParameterFloat* ParameterObject::getParameterFloat()
+juce::AudioParameterFloat *ParameterObject::getParameterFloat()
 {
-	return (juce::AudioParameterFloat*)parameter;
+	return (juce::AudioParameterFloat *)parameter;
 }
 
-juce::AudioParameterInt* ParameterObject::getParameterInt()
+juce::AudioParameterInt *ParameterObject::getParameterInt()
 {
-	return (juce::AudioParameterInt*)parameter;
+	return (juce::AudioParameterInt *)parameter;
 }
 
 //==============================================================================
@@ -92,7 +84,7 @@ int ParameterObject::getChoiceIndex()
 template <typename ChoiceType>
 ChoiceType ParameterObject::getChoiceValue()
 {
-	return static_cast<ChoiceType>getChoiceIndex();
+	return static_cast<ChoiceType> getChoiceIndex();
 }
 
 float ParameterObject::getFloatValue()
@@ -117,19 +109,10 @@ float ParameterObject::getSmoothedValue()
 	return smoothedVariable.smoothingType != SmoothingType::NoSmoothing ? smoothedVariable.getNextValue() : getFloatValue();
 }
 
-void ParameterObject::reset(double sampleRate, double rampLengthInSeconds)
+void ParameterObject::initSmoothing(double sampleRate, double rampLengthInSeconds)
 {
 	smoothedVariable.reset(sampleRate, rampLengthInSeconds);
-}
-
-void ParameterObject::setCurrentAndTargetValue(float newValue)
-{
-	smoothedVariable.setCurrentAndTargetValue(newValue);
-}
-
-void ParameterObject::setTargetValue(float newValue)
-{
-	smoothedVariable.setTargetValue(newValue);
+	smoothedVariable.setCurrentAndTargetValue(getFloatValue());
 }
 
 //==============================================================================
@@ -139,26 +122,26 @@ void ParameterObject::updateInBoundVariable()
 	switch (parameterType)
 	{
 	case Bool:
-		inBoundVariable = getParameterBool()->get();
+		inBoundVariable = getParameterBool()->get() ? 0.f : 1.f;
 		break;
 	case Choice:
-		inBoundVariable = getParameterChoice()->getIndex();
+		inBoundVariable = static_cast<float>(getParameterChoice()->getIndex());
 		break;
 	case Int:
-		inBoundVariable = getParameterInt()->get();
+		inBoundVariable = static_cast<float>(getParameterInt()->get());
 		break;
 	case Float:
-	default:
 		inBoundVariable = getParameterFloat()->get();
+	default:
 		break;
 	}
 
 	// -- Set the smoothed value target to the inBound variable.
-	//smoothedVariable.setTargetValue(inBoundVariable);
+	smoothedVariable.setTargetValue(inBoundVariable);
 }
 
 //==============================================================================
-ParameterObject& ParameterObject::operator=(const ParameterObject& param)
+ParameterObject &ParameterObject::operator=(const ParameterObject &param)
 {
 	if (this == &param)
 	{

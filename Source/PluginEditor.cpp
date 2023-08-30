@@ -10,11 +10,21 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS, PrepareParameterInfo(&parameterInfoArr)[ControlID::countParams])
+//TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS, ParameterDefinition(&parameterDefinitions)[ControlID::countParams]
+//)
+//	: AudioProcessorEditor(&p),
+//	audioProcessor(p),
+//	parametersAPVTS(parametersAPVTS),
+//	parameterDefinitions(parameterDefinitions)
+//{
+//	setSize(400, 300);
+//}
+
+TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS
+)
 	: AudioProcessorEditor(&p),
 	audioProcessor(p),
-	parametersAPVTS(parametersAPVTS),
-	parameterInfoArr(parameterInfoArr)
+	parametersAPVTS(parametersAPVTS)
 {
 	setSize(400, 300);
 }
@@ -31,8 +41,8 @@ void TemplateDSPPluginAudioProcessorEditor::paint(juce::Graphics& g)
 
 	g.setColour(juce::Colours::white);
 	g.setFont(15.0f);
-	bool val = ((juce::AudioParameterFloat*)parametersAPVTS.getParameter(parameterInfoArr[ControlID::gain].getParamID()))->get();
-	g.drawFittedText(std::to_string(val), getLocalBounds(), juce::Justification::centred, 1);
+	//bool val = ((juce::AudioParameterFloat*)parametersAPVTS.getParameter(parameterDefinitions[ControlID::gain].getParamID()))->get();
+	//g.drawFittedText(std::to_string(val), getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void TemplateDSPPluginAudioProcessorEditor::resized()

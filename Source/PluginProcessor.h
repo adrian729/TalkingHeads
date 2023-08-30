@@ -10,13 +10,8 @@
 
 #include <JuceHeader.h>
 #include "ParameterObject.h"
-
-//==============================================================================
-// --- MACROS enum
-#define enumToInt(ENUM) static_cast<int>(ENUM)
-#define intToEnum(INT, ENUM) static_cast<ENUM>(INT)
-#define compareEnumToInt(ENUM, INT) (enumToInt(ENUM) == INT)
-#define compareIntToEnum(INT, ENUM) (INT == enumToInt(ENUM))
+#include "parameterTypes.h"
+#include "ParameterDefinition.h"
 
 //==============================================================================
 // --- PARAMETER IDs
@@ -25,111 +20,6 @@ enum ControlID {
 	invertPhase,
 	//==============================================================================
 	countParams // value to keep track of the total number of parameters
-};
-
-struct PrepareParameterInfo {
-
-	//==============================================================================
-	// -- BOOL CONSTRUCTOR
-	PrepareParameterInfo(
-		ControlID id,
-		const juce::String& name,
-		bool defaultValue,
-		const juce::String& label = juce::String()
-	) :
-		parameterID(juce::ParameterID { id, 1 }), // TODO: add versionHint setter or constructors
-		name(name),
-		parameterType(ParameterType::Bool),
-		boolDefaultValue(defaultValue),
-		label(label)
-	{
-	}
-	// -- CHOICE CONSTRUCTOR
-	PrepareParameterInfo(
-		ControlID id,
-		const juce::String& name,
-		const juce::StringArray& choices,
-		int defaultItemIndex,
-		const juce::String& label = juce::String()
-	) :
-		parameterID(juce::ParameterID { id, 1 }), // TODO: add versionHint setter or constructors
-		name(name),
-		parameterType(ParameterType::Choice),
-		choices(choices),
-		defaultItemIndex(defaultItemIndex),
-		label(label)
-	{
-	}
-	// -- FLOAT CONSTRUCTOR
-	PrepareParameterInfo(
-		ControlID id,
-		const juce::String& name,
-		const juce::NormalisableRange<float>& floatRange,
-		float defaultValue,
-		SmoothingType smoothingType,
-		const juce::String& label = juce::String()
-	) :
-		parameterID(juce::ParameterID { id, 1 }), // TODO: add versionHint setter or constructors
-		name(name),
-		parameterType(ParameterType::Float),
-		floatRange(floatRange),
-		floatDefaultValue(defaultValue),
-		smoothingType(smoothingType),
-		label(label)
-	{
-	}
-	// -- INT CONSTRUCTOR
-	PrepareParameterInfo(
-		ControlID id,
-		const juce::String& name,
-		int minValue,
-		int maxValue,
-		int defaultValue,
-		const juce::String& label = juce::String()
-	) :
-		parameterID(juce::ParameterID { id, 1 }), // TODO: add versionHint setter or constructors
-		name(name),
-		parameterType(ParameterType::Int),
-		minValue(minValue),
-		maxValue(maxValue),
-		intDefaultValue(defaultValue),
-		label(label)
-	{
-	}
-
-	//==============================================================================
-	// -- Basic parameter info
-	juce::ParameterID parameterID;
-	juce::String name;
-	//==============================================================================
-	// -- Extra parameter info
-	juce::String label { juce::String() };
-
-	//==============================================================================
-	// -- Parameter type
-	ParameterType parameterType{ ParameterType::Float };
-
-	//==============================================================================
-	// -- BOOL parameters
-	bool boolDefaultValue{ false };
-	// -- CHOICE parameters
-	juce::StringArray choices{juce::StringArray()};
-	int defaultItemIndex{ 0 };
-	// -- FLOAT parameters
-	juce::NormalisableRange<float> floatRange {juce::NormalisableRange<float>()};
-	float floatDefaultValue{ 0.f };
-	SmoothingType smoothingType{ SmoothingType::NoSmoothing };
-	// -- INT parameters
-	int minValue{ 0 };
-	int maxValue{ 0 };
-	int intDefaultValue{ 0 };
-
-
-	//==============================================================================
-	juce::String getParamID() const
-	{
-		return parameterID.getParamID();
-	}
 };
 
 //==============================================================================
@@ -184,17 +74,19 @@ private:
 	const juce::String PARAMETERS_APVTS_ID = "ParametersAPVTS";
 
 	// Make sure this each param position matches the ControlID enum in PluginProcessor.h
-	const PrepareParameterInfo prepareParameterInfoArr[ControlID::countParams] = {
-		PrepareParameterInfo(
+	const ParameterDefinition parameterDefinitions[ControlID::countParams] = {
+		ParameterDefinition(
 			ControlID::gain,
+			1,
 			"Gain",
 			juce::NormalisableRange<float>(-24.f, 24.f, 0.01f),
 			0.f,
 			SmoothingType::Linear,
 			"dB"
 		),
-		PrepareParameterInfo(
+		ParameterDefinition(
 			ControlID::invertPhase,
+			1,
 			"Invert Phase",
 			false
 		)
@@ -212,13 +104,11 @@ private:
 
 	//==============================================================================
 	// --- Object member variables
-	juce::NormalisableRange<float> range;
-	juce::LinearSmoothedValue<float> gainSmoothedValue;
 	float gain;
 	int invertPhase;
 
 	//==============================================================================
-	void initPluginParameters(double sampleRate);
+	void initPluginParameters();
 	void initPluginMemberVariables(double sampleRate);
 
 	//==============================================================================

@@ -95,7 +95,7 @@ void TemplateDSPPluginAudioProcessor::changeProgramName(int index, const juce::S
 void TemplateDSPPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 	// -- create the parameters and inBound variables
-	initPluginParameters(sampleRate);
+	initPluginParameters();
 	// -- init the member variables
 	initPluginMemberVariables(sampleRate);
 }
@@ -133,6 +133,7 @@ void TemplateDSPPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buf
 	auto totalNumOutputChannels = getTotalNumOutputChannels();
 	auto numSamples = buffer.getNumSamples();
 
+	// -- clear output channels not in use
 	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
 	{
 		buffer.clear(i, 0, numSamples);
@@ -155,23 +156,7 @@ void TemplateDSPPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buf
 
 		// -- update values that use smoothing
 		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getSmoothedValue());
-		//gain = juce::Decibels::decibelsToGain(range.convertFrom0to1(gainSmoothedValue.getNextValue()));
-		DBG("SAMPLE: " << sample << " GAIN: " << gain);
 	}
-
-
-	//for (int channel = 0; channel < totalNumInputChannels; ++channel)
-	//{
-	//	auto* channelData = buffer.getWritePointer(channel);
-
-	//	for (int sample = 0; sample < numSamples; ++sample) {
-
-	//		float x_n = channelData[sample];
-
-	//		channelData[sample] = invertPhase * gain * x_n;
-	//	}
-
-	//}
 
 	postProcessBlock();
 }
@@ -209,73 +194,32 @@ void TemplateDSPPluginAudioProcessor::setStateInformation(const void* data, int 
 juce::AudioProcessorValueTreeState::ParameterLayout TemplateDSPPluginAudioProcessor::createParameterLayout()
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-	// TODO: check that num ids are valid XML names
+	// TODO: check that num ids are valid XML names -------------------------------
 	for (int i{ 0 }; i < ControlID::countParams; ++i)
 	{
-		PrepareParameterInfo info = prepareParameterInfoArr[i];
-		switch (info.parameterType)
-		{
-		case ParameterType::Bool:
-			layout.add(std::make_unique<juce::AudioParameterBool>(
-				info.parameterID,
-				info.name,
-				info.boolDefaultValue,
-				juce::AudioParameterBoolAttributes().withLabel(info.label)
-			));
-			break;
-		case ParameterType::Choice:
-			layout.add(std::make_unique<juce::AudioParameterChoice>(
-				info.parameterID,
-				info.name,
-				info.choices,
-				info.defaultItemIndex,
-				juce::AudioParameterChoiceAttributes().withLabel(info.label)
-			));
-			break;
-		case ParameterType::Float:
-			layout.add(std::make_unique<juce::AudioParameterFloat>(
-				info.parameterID,
-				info.name,
-				info.floatRange,
-				info.floatDefaultValue,
-				juce::AudioParameterFloatAttributes().withLabel(info.label)
-			));
-			break;
-		case ParameterType::Int:
-			layout.add(std::make_unique<juce::AudioParameterInt>(
-				info.parameterID,
-				info.name,
-				info.minValue,
-				info.maxValue,
-				info.intDefaultValue,
-				juce::AudioParameterIntAttributes().withLabel(info.label)
-			));
-			break;
-		}
+		layout.add(parameterDefinitions[i].createParameter());
 	}
 
 	return layout;
 }
 
 //==============================================================================
-void TemplateDSPPluginAudioProcessor::initPluginParameters(double sampleRate)
+void TemplateDSPPluginAudioProcessor::initPluginParameters()
 {
 	// -- initialize the parameters
 	for (int i{ 0 }; i < ControlID::countParams; ++i)
 	{
-		if (prepareParameterInfoArr[i].smoothingType == SmoothingType::NoSmoothing)
+		if (parameterDefinitions[i].getSmoothingType() == SmoothingType::NoSmoothing)
 		{
 			pluginProcessorParameters[i] = ParameterObject(
-				parametersAPVTS.getParameter(prepareParameterInfoArr[i].getParamID()),
-				prepareParameterInfoArr[i].parameterType
+				parametersAPVTS.getParameter(parameterDefinitions[i].getParamID()),
+				parameterDefinitions[i].getParameterType()
 			);
 		}
 		else {
 			pluginProcessorParameters[i] = ParameterObject(
-				parametersAPVTS.getParameter(prepareParameterInfoArr[i].getParamID()),
-				prepareParameterInfoArr[i].smoothingType,
-				sampleRate
+				parametersAPVTS.getParameter(parameterDefinitions[i].getParamID()),
+				parameterDefinitions[i].getSmoothingType()
 			);
 		}
 	}
@@ -284,14 +228,9 @@ void TemplateDSPPluginAudioProcessor::initPluginParameters(double sampleRate)
 void TemplateDSPPluginAudioProcessor::initPluginMemberVariables(double sampleRate) {
 	// -- initialize the member variables
 	gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getFloatValue());
-	//gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getSmoothedCurrentValue());
 
-	// -- TMP TO FIX SMOOTHING
-	//range = parametersAPVTS.getParameter(prepareParameterInfoArr[ControlID::gain].getParamID())->getNormalisableRange();
-	pluginProcessorParameters[ControlID::gain].reset(sampleRate, 0.05f);
-	pluginProcessorParameters[ControlID::gain].setCurrentAndTargetValue(gain);
-	//gainSmoothedValue.reset(sampleRate, 0.05f);
-	//gainSmoothedValue.setCurrentAndTargetValue(range.convertTo0to1(gain));
+	// -- Setup smoothing
+	pluginProcessorParameters[ControlID::gain].initSmoothing(sampleRate);
 
 	invertPhase = pluginProcessorParameters[ControlID::invertPhase].getBoolValue() ? -1 : 1;
 }
@@ -313,8 +252,6 @@ void TemplateDSPPluginAudioProcessor::syncInBoundVariables() {
 		pluginProcessorParameters[i].updateInBoundVariable();
 		postUpdatePluginParameter(intToEnum(i, ControlID));
 	}
-	pluginProcessorParameters[ControlID::gain].setTargetValue(pluginProcessorParameters[ControlID::gain].getFloatValue());
-	//gainSmoothedValue.setTargetValue(range.convertTo0to1(pluginProcessorParameters[ControlID::gain].getFloatValue()));
 }
 
 bool TemplateDSPPluginAudioProcessor::postUpdatePluginParameter(ControlID controlID)
@@ -325,7 +262,6 @@ bool TemplateDSPPluginAudioProcessor::postUpdatePluginParameter(ControlID contro
 	case ControlID::gain:
 	{
 		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getSmoothedValue());
-		//gain = juce::Decibels::decibelsToGain(range.convertFrom0to1(gainSmoothedValue.getNextValue()));
 		break;
 	}
 	case ControlID::invertPhase:

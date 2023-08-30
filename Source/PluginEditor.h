@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+//#include "ParameterDefinition.h"
 
 //==============================================================================
 /**
@@ -17,7 +18,8 @@
 class TemplateDSPPluginAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-	TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor&, juce::AudioProcessorValueTreeState&, PrepareParameterInfo(&)[ControlID::countParams]);
+	//TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor&, juce::AudioProcessorValueTreeState&, ParameterDefinition(&)[ControlID::countParams]);
+	TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor&, juce::AudioProcessorValueTreeState&);
 	~TemplateDSPPluginAudioProcessorEditor() override;
 
 	//==============================================================================
@@ -32,7 +34,7 @@ private:
 	using APVTS = juce::AudioProcessorValueTreeState;
 	APVTS& parametersAPVTS;
 
-	PrepareParameterInfo(&parameterInfoArr)[ControlID::countParams];
+	//ParameterDefinition(&parameterDefinitions)[ControlID::countParams];
 
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TemplateDSPPluginAudioProcessorEditor)

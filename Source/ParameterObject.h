@@ -10,21 +10,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-
-enum ParameterType
-{
-	Bool,
-	Choice,
-	Float,
-	Int
-};
-
-enum SmoothingType
-{
-	NoSmoothing,
-	Linear,
-	Multiplicative
-};
+#include "parameterTypes.h"
 
 struct SmoothingObject
 {
@@ -36,7 +22,7 @@ struct SmoothingObject
 	{
 	}
 
-	SmoothingObject(const SmoothingType& smoothingType, const juce::NormalisableRange<float>& range) :
+	SmoothingObject(SmoothingType smoothingType, const juce::NormalisableRange<float>& range) :
 		smoothingType(smoothingType),
 		range(juce::NormalisableRange(range))
 	{
@@ -68,10 +54,10 @@ struct SmoothingObject
 
 		switch (smoothingType)
 		{
-		case Linear:
+		case SmoothingType::Linear:
 			linearSmoothedValue.reset(sampleRate, 0.5f);
 			break;
-		case Multiplicative:
+		case SmoothingType::Multiplicative:
 			multiplicativeSmoothedValue.reset(sampleRate, rampLengthInSeconds);
 			break;
 		default:
@@ -92,10 +78,10 @@ struct SmoothingObject
 
 		switch (smoothingType)
 		{
-		case Linear:
+		case SmoothingType::Linear:
 			linearSmoothedValue.setCurrentAndTargetValue(normalizedNewValue);
 			break;
-		case Multiplicative:
+		case SmoothingType::Multiplicative:
 			multiplicativeSmoothedValue.setCurrentAndTargetValue(safeMultiplicativeValue(normalizedNewValue));
 			break;
 		default:
@@ -116,10 +102,10 @@ struct SmoothingObject
 
 		switch (smoothingType)
 		{
-		case Linear:
+		case SmoothingType::Linear:
 			linearSmoothedValue.setTargetValue(normalizedNewValue);
 			break;
-		case Multiplicative:
+		case SmoothingType::Multiplicative:
 			multiplicativeSmoothedValue.setTargetValue(safeMultiplicativeValue(normalizedNewValue));
 			break;
 		}
@@ -137,10 +123,10 @@ struct SmoothingObject
 		float normalizedValue = 0.f;
 		switch (smoothingType)
 		{
-		case Linear:
+		case SmoothingType::Linear:
 			normalizedValue = linearSmoothedValue.getCurrentValue();
 			break;
-		case Multiplicative:
+		case SmoothingType::Multiplicative:
 			normalizedValue = multiplicativeSmoothedValue.getCurrentValue();
 			break;
 		}
@@ -159,7 +145,6 @@ struct SmoothingObject
 		float normalizedValue = 0.f;
 		for (int i = 0; i < 100; ++i)
 		{
-			DBG("NORMALIZED: " << normalizedValue << " SMOTHIN? " << std::to_string(linearSmoothedValue.isSmoothing()));
 			switch (smoothingType)
 			{
 			case Linear:
@@ -181,6 +166,7 @@ struct SmoothingObject
 	}
 
 	//==============================================================================
+	// TODO: make sure this is correct for the smoothed values
 	SmoothingObject& operator=(const SmoothingObject& newObject)
 	{
 		if (this == &newObject)
@@ -203,7 +189,7 @@ public:
 	//==============================================================================
 	ParameterObject();
 	ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType = ParameterType::Float);
-	ParameterObject(juce::RangedAudioParameter* parameter, SmoothingType smoothingType, double sampleRate, double rampLengthInSeconds = 10.05f);
+	ParameterObject(juce::RangedAudioParameter* parameter, SmoothingType smoothingType);
 	~ParameterObject();
 
 	//==============================================================================
@@ -232,9 +218,7 @@ public:
 	float getSmoothedCurrentValue();
 	float getSmoothedValue();
 
-	void reset(double sampleRate, double rampLengthInSeconds);
-	void setTargetValue(float newValue);
-	void setCurrentAndTargetValue(float newValue);
+	void initSmoothing(double sampleRate, double rampLengthInSeconds = 0.005f);
 
 	//==============================================================================
 	void updateInBoundVariable();
@@ -246,15 +230,9 @@ private:
 	//==============================================================================
 	// -- Parameter data
 	juce::RangedAudioParameter* parameter{ nullptr };
-
 	ParameterType parameterType{ ParameterType::Float };
-
-	SmoothingObject smoothedVariable;
 
 	// -- InBound value
 	std::atomic<float> inBoundVariable;
-
-
-
-
+	SmoothingObject smoothedVariable;
 };
