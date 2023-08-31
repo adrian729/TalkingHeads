@@ -10,7 +10,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-//TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS, ParameterDefinition(&parameterDefinitions)[ControlID::countParams]
+//TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TalkingHeadsPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS, ParameterDefinition(&parameterDefinitions)[ControlID::countParams]
 //)
 //	: AudioProcessorEditor(&p),
 //	audioProcessor(p),
@@ -20,7 +20,7 @@
 //	setSize(400, 300);
 //}
 
-TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS
+TemplateDSPPluginAudioProcessorEditor::TemplateDSPPluginAudioProcessorEditor(TalkingHeadsPluginAudioProcessor& p, juce::AudioProcessorValueTreeState& parametersAPVTS
 )
 	: AudioProcessorEditor(&p),
 	audioProcessor(p),

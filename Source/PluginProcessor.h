@@ -9,15 +9,16 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "ParameterObject.h"
 #include "parameterTypes.h"
+#include "ParameterObject.h"
 #include "ParameterDefinition.h"
 
 //==============================================================================
 // --- PARAMETER IDs
 enum ControlID {
+	bypass,
+	blend,
 	gain,
-	invertPhase,
 	//==============================================================================
 	countParams // value to keep track of the total number of parameters
 };
@@ -25,15 +26,15 @@ enum ControlID {
 //==============================================================================
 /**
 */
-class TemplateDSPPluginAudioProcessor : public juce::AudioProcessor
+class TalkingHeadsPluginAudioProcessor : public juce::AudioProcessor
 #if JucePlugin_Enable_ARA
 	, public juce::AudioProcessorARAExtension
 #endif
 {
 public:
 	//==============================================================================
-	TemplateDSPPluginAudioProcessor();
-	~TemplateDSPPluginAudioProcessor() override;
+	TalkingHeadsPluginAudioProcessor();
+	~TalkingHeadsPluginAudioProcessor() override;
 
 	//==============================================================================
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -70,44 +71,30 @@ public:
 
 private:
 	//==============================================================================
-	// --- Object parameters helper variables and structures
+	// --- Object parameters management and information
+
+	// --- Parameters definitions - make sure each item in the array matches the order of the enum
+	const std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions = createParameterDefinitions();
+
+	// --- Parameters state APVTS
 	const juce::String PARAMETERS_APVTS_ID = "ParametersAPVTS";
-
-	// Make sure this each param position matches the ControlID enum in PluginProcessor.h
-	const ParameterDefinition parameterDefinitions[ControlID::countParams] = {
-		ParameterDefinition(
-			ControlID::gain,
-			1,
-			"Gain",
-			juce::NormalisableRange<float>(-24.f, 24.f, 0.01f),
-			0.f,
-			SmoothingType::Linear,
-			"dB"
-		),
-		ParameterDefinition(
-			ControlID::invertPhase,
-			1,
-			"Invert Phase",
-			false
-		)
-	};
-
-	//==============================================================================
-	// --- Object parameters state
 	juce::AudioProcessorValueTreeState parametersAPVTS;
 
-	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
-	//==============================================================================
 	// --- Object parameters and inBound variables
 	ParameterObject pluginProcessorParameters[ControlID::countParams];
 
 	//==============================================================================
 	// --- Object member variables
+
+	// -- General process
+	float bypass; // -- using a float to smooth the bypass transition
+	float blend;
 	float gain;
-	int invertPhase;
 
 	//==============================================================================
+	const std::array<ParameterDefinition, ControlID::countParams> createParameterDefinitions();
+	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
 	void initPluginParameters();
 	void initPluginMemberVariables(double sampleRate);
 
@@ -119,5 +106,8 @@ private:
 	bool postUpdatePluginParameter(ControlID parameterID);
 
 	//==============================================================================
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TemplateDSPPluginAudioProcessor)
+	float blendValues(float dry, float wet, float blend);
+
+	//==============================================================================
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TalkingHeadsPluginAudioProcessor)
 };

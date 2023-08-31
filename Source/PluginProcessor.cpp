@@ -10,32 +10,28 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-TemplateDSPPluginAudioProcessor::TemplateDSPPluginAudioProcessor()
+TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
 	: AudioProcessor(BusesProperties()
-#if ! JucePlugin_IsMidiEffect
-#if ! JucePlugin_IsSynth
-		.withInput("Input", juce::AudioChannelSet::stereo(), true)
-#endif
+		.withInput("Input", juce::AudioChannelSet::mono(), true)
 		.withOutput("Output", juce::AudioChannelSet::stereo(), true)
-#endif
 	),
 #endif
 	parametersAPVTS(*this, nullptr, juce::Identifier(PARAMETERS_APVTS_ID), createParameterLayout())
 {
 }
 
-TemplateDSPPluginAudioProcessor::~TemplateDSPPluginAudioProcessor()
+TalkingHeadsPluginAudioProcessor::~TalkingHeadsPluginAudioProcessor()
 {
 }
 
 //==============================================================================
-const juce::String TemplateDSPPluginAudioProcessor::getName() const
+const juce::String TalkingHeadsPluginAudioProcessor::getName() const
 {
 	return JucePlugin_Name;
 }
 
-bool TemplateDSPPluginAudioProcessor::acceptsMidi() const
+bool TalkingHeadsPluginAudioProcessor::acceptsMidi() const
 {
 #if JucePlugin_WantsMidiInput
 	return true;
@@ -44,7 +40,7 @@ bool TemplateDSPPluginAudioProcessor::acceptsMidi() const
 #endif
 }
 
-bool TemplateDSPPluginAudioProcessor::producesMidi() const
+bool TalkingHeadsPluginAudioProcessor::producesMidi() const
 {
 #if JucePlugin_ProducesMidiOutput
 	return true;
@@ -53,7 +49,7 @@ bool TemplateDSPPluginAudioProcessor::producesMidi() const
 #endif
 }
 
-bool TemplateDSPPluginAudioProcessor::isMidiEffect() const
+bool TalkingHeadsPluginAudioProcessor::isMidiEffect() const
 {
 #if JucePlugin_IsMidiEffect
 	return true;
@@ -62,37 +58,37 @@ bool TemplateDSPPluginAudioProcessor::isMidiEffect() const
 #endif
 }
 
-double TemplateDSPPluginAudioProcessor::getTailLengthSeconds() const
+double TalkingHeadsPluginAudioProcessor::getTailLengthSeconds() const
 {
 	return 0.0;
 }
 
-int TemplateDSPPluginAudioProcessor::getNumPrograms()
+int TalkingHeadsPluginAudioProcessor::getNumPrograms()
 {
 	return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
 	// so this should be at least 1, even if you're not really implementing programs.
 }
 
-int TemplateDSPPluginAudioProcessor::getCurrentProgram()
+int TalkingHeadsPluginAudioProcessor::getCurrentProgram()
 {
 	return 0;
 }
 
-void TemplateDSPPluginAudioProcessor::setCurrentProgram(int index)
+void TalkingHeadsPluginAudioProcessor::setCurrentProgram(int index)
 {
 }
 
-const juce::String TemplateDSPPluginAudioProcessor::getProgramName(int index)
+const juce::String TalkingHeadsPluginAudioProcessor::getProgramName(int index)
 {
 	return {};
 }
 
-void TemplateDSPPluginAudioProcessor::changeProgramName(int index, const juce::String& newName)
+void TalkingHeadsPluginAudioProcessor::changeProgramName(int index, const juce::String& newName)
 {
 }
 
 //==============================================================================
-void TemplateDSPPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void TalkingHeadsPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
 	// -- create the parameters and inBound variables
 	initPluginParameters();
@@ -100,14 +96,14 @@ void TemplateDSPPluginAudioProcessor::prepareToPlay(double sampleRate, int sampl
 	initPluginMemberVariables(sampleRate);
 }
 
-void TemplateDSPPluginAudioProcessor::releaseResources()
+void TalkingHeadsPluginAudioProcessor::releaseResources()
 {
 	// When playback stops, you can use this as an opportunity to free up any
 	// spare memory, etc.
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool TemplateDSPPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+bool TalkingHeadsPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
 	if (layouts.getMainInputChannelSet() == juce::AudioChannelSet::disabled()
 		|| layouts.getMainOutputChannelSet() == juce::AudioChannelSet::disabled())
@@ -115,17 +111,12 @@ bool TemplateDSPPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout& 
 		return false;
 	}
 
-	if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-		&& layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-	{
-		return false;
-	}
-
-	return layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet();
+	// Only mono/stereo are supported
+	return layouts.getMainInputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo();
 }
 #endif
 
-void TemplateDSPPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
 
 	juce::ScopedNoDenormals noDenormals;
@@ -147,41 +138,53 @@ void TemplateDSPPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buf
 		// -- frame: data of all channels for one sample
 		for (int channel = 0; channel < totalNumInputChannels; ++channel)
 		{
+			if (juce::approximatelyEqual(bypass, 1.f))
+			{
+				break;
+			}
+
 			auto* channelData = buffer.getWritePointer(channel);
 
-			float x_n = channelData[sample];
+			float x_n = channelData[sample]; // -- input sample
 
-			channelData[sample] = invertPhase * gain * x_n;
+			float fx_n = gain * x_n; // -- fx process
+
+			float wet = fx_n;
+			float dry = x_n;
+			float dryWetMix = blendValues(wet, dry, blend);
+
+			channelData[sample] = blendValues(x_n, dryWetMix, bypass);
 		}
 
 		// -- update values that use smoothing
-		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getSmoothedValue());
+		bypass = pluginProcessorParameters[ControlID::bypass].getNextValue();
+		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getNextValue());
 	}
 
 	postProcessBlock();
 }
 
 //==============================================================================
-bool TemplateDSPPluginAudioProcessor::hasEditor() const
+bool TalkingHeadsPluginAudioProcessor::hasEditor() const
 {
 	return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* TemplateDSPPluginAudioProcessor::createEditor()
+juce::AudioProcessorEditor* TalkingHeadsPluginAudioProcessor::createEditor()
 {
 	//return new TemplateDSPPluginAudioProcessorEditor (*this, parametersAPVTS, prepareParameterInfoArr);
 	return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void TemplateDSPPluginAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+void TalkingHeadsPluginAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
 	auto state = parametersAPVTS.copyState();
 	std::unique_ptr<juce::XmlElement> xml(state.createXml());
 	copyXmlToBinary(*xml, destData);
 }
 
-void TemplateDSPPluginAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+void TalkingHeadsPluginAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
 	std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
@@ -191,7 +194,96 @@ void TemplateDSPPluginAudioProcessor::setStateInformation(const void* data, int 
 	}
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout TemplateDSPPluginAudioProcessor::createParameterLayout()
+//==============================================================================
+void TalkingHeadsPluginAudioProcessor::preProcessBlock()
+{
+	syncInBoundVariables();
+}
+
+void TalkingHeadsPluginAudioProcessor::postProcessBlock()
+{
+
+}
+
+void TalkingHeadsPluginAudioProcessor::syncInBoundVariables() {
+	for (int i = 0; i < ControlID::countParams; ++i)
+	{
+		pluginProcessorParameters[i].updateInBoundVariable();
+		postUpdatePluginParameter(intToEnum(i, ControlID));
+	}
+}
+
+bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID controlID)
+{
+	// Cooking and transfer raw parameters to member variables
+	switch (controlID)
+	{
+	case ControlID::bypass:
+	{
+		bypass = pluginProcessorParameters[ControlID::bypass].getNextValue();
+		break;
+	}
+	case ControlID::blend:
+	{
+		blend = pluginProcessorParameters[ControlID::blend].getNextValue();
+		break;
+	}
+	case ControlID::gain:
+	{
+		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getNextValue());
+		break;
+	}
+	default:
+		return false;
+	}
+
+	return true;
+}
+
+//==============================================================================
+float TalkingHeadsPluginAudioProcessor::blendValues(float wet, float dry, float blend)
+{
+	return blend * wet + (1.f - blend) * dry;
+}
+
+//==============================================================================
+const std::array<ParameterDefinition, ControlID::countParams> TalkingHeadsPluginAudioProcessor::createParameterDefinitions()
+{
+	std::array<ParameterDefinition, ControlID::countParams> tmp_parameterDefinitions;
+
+	// -- using a float to be able to smooth the bypass transition
+	tmp_parameterDefinitions[ControlID::bypass] = ParameterDefinition(
+		ControlID::bypass,
+		1,
+		"Bypass",
+		juce::NormalisableRange<float>(0.f, 1.f, 1.f),
+		0.f,
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::blend] = ParameterDefinition(
+		ControlID::blend,
+		1,
+		"Blend",
+		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
+		1.f,
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::gain] = ParameterDefinition(
+		ControlID::gain,
+		1,
+		"Gain",
+		juce::NormalisableRange<float>(-24.f, 24.f, 0.01f),
+		0.f,
+		SmoothingType::Linear,
+		"dB"
+	);
+
+	return tmp_parameterDefinitions;
+}
+
+juce::AudioProcessorValueTreeState::ParameterLayout TalkingHeadsPluginAudioProcessor::createParameterLayout()
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout layout;
 	// TODO: check that num ids are valid XML names -------------------------------
@@ -203,8 +295,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout TemplateDSPPluginAudioProces
 	return layout;
 }
 
-//==============================================================================
-void TemplateDSPPluginAudioProcessor::initPluginParameters()
+void TalkingHeadsPluginAudioProcessor::initPluginParameters()
 {
 	// -- initialize the parameters
 	for (int i{ 0 }; i < ControlID::countParams; ++i)
@@ -225,61 +316,23 @@ void TemplateDSPPluginAudioProcessor::initPluginParameters()
 	}
 }
 
-void TemplateDSPPluginAudioProcessor::initPluginMemberVariables(double sampleRate) {
+void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRate) {
 	// -- initialize the member variables
+	bypass = pluginProcessorParameters[ControlID::bypass].getFloatValue();
+	blend = pluginProcessorParameters[ControlID::blend].getFloatValue();
 	gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getFloatValue());
 
 	// -- Setup smoothing
+	pluginProcessorParameters[ControlID::bypass].initSmoothing(sampleRate);
+	pluginProcessorParameters[ControlID::blend].initSmoothing(sampleRate);
 	pluginProcessorParameters[ControlID::gain].initSmoothing(sampleRate);
 
-	invertPhase = pluginProcessorParameters[ControlID::invertPhase].getBoolValue() ? -1 : 1;
-}
-
-//==============================================================================
-void TemplateDSPPluginAudioProcessor::preProcessBlock()
-{
-	syncInBoundVariables();
-}
-
-void TemplateDSPPluginAudioProcessor::postProcessBlock()
-{
-
-}
-
-void TemplateDSPPluginAudioProcessor::syncInBoundVariables() {
-	for (int i = 0; i < ControlID::countParams; ++i)
-	{
-		pluginProcessorParameters[i].updateInBoundVariable();
-		postUpdatePluginParameter(intToEnum(i, ControlID));
-	}
-}
-
-bool TemplateDSPPluginAudioProcessor::postUpdatePluginParameter(ControlID controlID)
-{
-	// Cooking and transfer raw parameters to member variables
-	switch (controlID)
-	{
-	case ControlID::gain:
-	{
-		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getSmoothedValue());
-		break;
-	}
-	case ControlID::invertPhase:
-	{
-		invertPhase = pluginProcessorParameters[ControlID::invertPhase].getBoolValue() ? -1 : 1;
-		break;
-	}
-	default:
-		return false;
-	}
-
-	return true;
 }
 
 //==============================================================================
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-	return new TemplateDSPPluginAudioProcessor();
+	return new TalkingHeadsPluginAudioProcessor();
 }
 

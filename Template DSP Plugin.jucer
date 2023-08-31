@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="cRNZJW" name="Template DSP Plugin" projectType="audioplug"
-              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
-  <MAINGROUP id="ReKlOL" name="Template DSP Plugin">
+<JUCERPROJECT id="cRNZJW" name="TalkingHeads" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyWebsite="brutus729"
+              pluginVST3Category="EQ,Fx,Modulation">
+  <MAINGROUP id="ReKlOL" name="TalkingHeads">
     <GROUP id="{3B98639A-39C4-21A4-0925-BF127ED63BBC}" name="Source">
-      <FILE id="GVwcrS" name="ParameterDefinition.cpp" compile="1" resource="0"
-            file="Source/ParameterDefinition.cpp"/>
-      <FILE id="JNJ5yf" name="ParameterDefinition.h" compile="0" resource="0"
-            file="Source/ParameterDefinition.h"/>
-      <FILE id="n1B19a" name="parameterTypes.h" compile="0" resource="0"
-            file="Source/parameterTypes.h"/>
-      <FILE id="CAhcVx" name="ParameterObject.cpp" compile="1" resource="0"
-            file="Source/ParameterObject.cpp"/>
-      <FILE id="tsmAcj" name="ParameterObject.h" compile="0" resource="0"
-            file="Source/ParameterObject.h"/>
+      <GROUP id="{EEF93889-7709-BAD3-6992-50B88172DB66}" name="Parameter">
+        <FILE id="CAhcVx" name="ParameterObject.cpp" compile="1" resource="0"
+              file="Source/ParameterObject.cpp"/>
+        <FILE id="tsmAcj" name="ParameterObject.h" compile="0" resource="0"
+              file="Source/ParameterObject.h"/>
+        <FILE id="GVwcrS" name="ParameterDefinition.cpp" compile="1" resource="0"
+              file="Source/ParameterDefinition.cpp"/>
+        <FILE id="JNJ5yf" name="ParameterDefinition.h" compile="0" resource="0"
+              file="Source/ParameterDefinition.h"/>
+        <FILE id="n1B19a" name="parameterTypes.h" compile="0" resource="0"
+              file="Source/parameterTypes.h"/>
+      </GROUP>
       <FILE id="jNBxZM" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="NbrPz1" name="PluginProcessor.h" compile="0" resource="0"

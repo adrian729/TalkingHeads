@@ -19,13 +19,15 @@ class ParameterDefinition
 public:
 	//==============================================================================
 	// -- CONSTRUCTORS
+	// -- DEFAULT CONSTRUCTOR
+	ParameterDefinition();
 	// -- BOOL
 	ParameterDefinition(
 		int id,
 		int versionHint,
 		const juce::String& name,
 		bool defaultValue = false,
-		const juce::String& suffixLabel = juce::String()
+		const juce::String& suffixLabel = ""
 	);
 	// -- CHOICE CONSTRUCTOR
 	ParameterDefinition(
@@ -34,7 +36,7 @@ public:
 		const juce::String& name,
 		const juce::StringArray& choices,
 		int defaultItemIndex = 0,
-		const juce::String& suffixLabel = juce::String()
+		const juce::String& suffixLabel = ""
 	);
 	// -- FLOAT CONSTRUCTOR
 	ParameterDefinition(
@@ -44,7 +46,7 @@ public:
 		const juce::NormalisableRange<float>& floatRange,
 		float defaultValue = 0.f,
 		SmoothingType smoothingType = SmoothingType::NoSmoothing,
-		const juce::String& suffixLabel = juce::String()
+		const juce::String& suffixLabel = ""
 	);
 	// -- INT CONSTRUCTOR
 	ParameterDefinition(
@@ -54,7 +56,7 @@ public:
 		int minValue,
 		int maxValue,
 		int defaultValue = 0,
-		const juce::String& suffixLabel = juce::String()
+		const juce::String& suffixLabel = ""
 	);
 
 	//==============================================================================
@@ -102,7 +104,7 @@ private:
 
 	//==============================================================================
 	// -- Parameter information
-	ParameterType parameterType;
+	ParameterType parameterType{ ParameterType::Float };
 	float defaultValue; // will be cast to the appropriate type
 	// -- CHOICE parameters
 	juce::StringArray choices{ juce::StringArray() };

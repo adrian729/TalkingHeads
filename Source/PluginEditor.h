@@ -18,8 +18,8 @@
 class TemplateDSPPluginAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-	//TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor&, juce::AudioProcessorValueTreeState&, ParameterDefinition(&)[ControlID::countParams]);
-	TemplateDSPPluginAudioProcessorEditor(TemplateDSPPluginAudioProcessor&, juce::AudioProcessorValueTreeState&);
+	//TemplateDSPPluginAudioProcessorEditor(TalkingHeadsPluginAudioProcessor&, juce::AudioProcessorValueTreeState&, ParameterDefinition(&)[ControlID::countParams]);
+	TemplateDSPPluginAudioProcessorEditor(TalkingHeadsPluginAudioProcessor&, juce::AudioProcessorValueTreeState&);
 	~TemplateDSPPluginAudioProcessorEditor() override;
 
 	//==============================================================================
@@ -29,7 +29,7 @@ public:
 private:
 	// This reference is provided as a quick way for your editor to
 	// access the processor object that created it.
-	TemplateDSPPluginAudioProcessor& audioProcessor;
+	TalkingHeadsPluginAudioProcessor& audioProcessor;
 
 	using APVTS = juce::AudioProcessorValueTreeState;
 	APVTS& parametersAPVTS;

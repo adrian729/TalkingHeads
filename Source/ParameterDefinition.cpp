@@ -12,6 +12,16 @@
 
 //==============================================================================
 // -- CONSTRUCTORS
+// -- DEFAULT CONSTRUCTOR
+ParameterDefinition::ParameterDefinition() :
+	parameterID(juce::ParameterID()),
+	name(juce::String()),
+	parameterType(ParameterType::Float),
+	floatRange(juce::NormalisableRange<float>()),
+	defaultValue(0.f),
+	suffixLabel("")
+{
+}
 // -- BOOL
 ParameterDefinition::ParameterDefinition(
 	int id,
@@ -23,7 +33,7 @@ ParameterDefinition::ParameterDefinition(
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Bool),
-	defaultValue(defaultValue ? 1.f : 0.f),
+	defaultValue(static_cast<float>(defaultValue)),
 	suffixLabel(suffixLabel)
 {
 }
@@ -114,7 +124,7 @@ ParameterType ParameterDefinition::getParameterType() const
 //==============================================================================
 bool ParameterDefinition::getBoolDefaultValue() const
 {
-	return defaultValue > 0.5f;
+	return static_cast<bool>(defaultValue);
 }
 
 juce::StringArray ParameterDefinition::getChoices() const
