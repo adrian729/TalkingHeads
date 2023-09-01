@@ -19,7 +19,8 @@ ParameterDefinition::ParameterDefinition() :
 	parameterType(ParameterType::Float),
 	floatRange(juce::NormalisableRange<float>()),
 	defaultValue(0.f),
-	suffixLabel("")
+	suffixLabel(""),
+	smoothingType(SmoothingType::NoSmoothing)
 {
 }
 // -- BOOL
@@ -28,13 +29,15 @@ ParameterDefinition::ParameterDefinition(
 	int versionHint,
 	const juce::String& name,
 	bool defaultValue,
-	const juce::String& suffixLabel
+	const juce::String& suffixLabel,
+	SmoothingType smoothingType
 ) :
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Bool),
 	defaultValue(static_cast<float>(defaultValue)),
-	suffixLabel(suffixLabel)
+	suffixLabel(suffixLabel),
+	smoothingType(smoothingType)
 {
 }
 // -- CHOICE CONSTRUCTOR
@@ -44,14 +47,16 @@ ParameterDefinition::ParameterDefinition(
 	const juce::String& name,
 	const juce::StringArray& choices,
 	int defaultItemIndex,
-	const juce::String& suffixLabel
+	const juce::String& suffixLabel,
+	SmoothingType smoothingType
 ) :
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Choice),
 	choices(choices),
 	defaultValue(static_cast<float>(defaultItemIndex)),
-	suffixLabel(suffixLabel)
+	suffixLabel(suffixLabel),
+	smoothingType(smoothingType)
 {
 }
 // -- FLOAT CONSTRUCTOR
@@ -61,16 +66,16 @@ ParameterDefinition::ParameterDefinition(
 	const juce::String& name,
 	const juce::NormalisableRange<float>& floatRange,
 	float defaultValue,
-	SmoothingType smoothingType,
-	const juce::String& suffixLabel
+	const juce::String& suffixLabel,
+	SmoothingType smoothingType
 ) :
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Float),
 	floatRange(floatRange),
 	defaultValue(defaultValue),
-	smoothingType(smoothingType),
-	suffixLabel(suffixLabel)
+	suffixLabel(suffixLabel),
+	smoothingType(smoothingType)
 {
 }
 // -- INT CONSTRUCTOR
@@ -81,7 +86,8 @@ ParameterDefinition::ParameterDefinition(
 	int minValue,
 	int maxValue,
 	int defaultValue,
-	const juce::String& suffixLabel
+	const juce::String& suffixLabel,
+	SmoothingType smoothingType
 ) :
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
@@ -89,7 +95,12 @@ ParameterDefinition::ParameterDefinition(
 	minValue(minValue),
 	maxValue(maxValue),
 	defaultValue(static_cast<float>(defaultValue)),
-	suffixLabel(suffixLabel)
+	suffixLabel(suffixLabel),
+	smoothingType(smoothingType)
+{
+}
+
+ParameterDefinition::~ParameterDefinition()
 {
 }
 

@@ -132,7 +132,7 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
 	preProcessBlock();
 
-	// -- TMP CHECKING WITH PROCESS BY FRAME
+	// -- GENERAL STAGE
 	for (int sample = 0; sample < numSamples; ++sample) {
 
 		// -- frame: data of all channels for one sample
@@ -160,6 +160,9 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 		bypass = pluginProcessorParameters[ControlID::bypass].getNextValue();
 		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getNextValue());
 	}
+
+
+	// TODO: we will need to convert mono to stereo later when adding space (panning etc)
 
 	postProcessBlock();
 }
@@ -256,8 +259,8 @@ const std::array<ParameterDefinition, ControlID::countParams> TalkingHeadsPlugin
 		ControlID::bypass,
 		1,
 		"Bypass",
-		juce::NormalisableRange<float>(0.f, 1.f, 1.f),
-		0.f,
+		false,
+		"",
 		SmoothingType::Linear
 	);
 
@@ -267,6 +270,7 @@ const std::array<ParameterDefinition, ControlID::countParams> TalkingHeadsPlugin
 		"Blend",
 		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
 		1.f,
+		"",
 		SmoothingType::Linear
 	);
 
@@ -276,8 +280,8 @@ const std::array<ParameterDefinition, ControlID::countParams> TalkingHeadsPlugin
 		"Gain",
 		juce::NormalisableRange<float>(-24.f, 24.f, 0.01f),
 		0.f,
-		SmoothingType::Linear,
-		"dB"
+		"dB",
+		SmoothingType::Linear
 	);
 
 	return tmp_parameterDefinitions;
@@ -300,19 +304,11 @@ void TalkingHeadsPluginAudioProcessor::initPluginParameters()
 	// -- initialize the parameters
 	for (int i{ 0 }; i < ControlID::countParams; ++i)
 	{
-		if (parameterDefinitions[i].getSmoothingType() == SmoothingType::NoSmoothing)
-		{
-			pluginProcessorParameters[i] = ParameterObject(
-				parametersAPVTS.getParameter(parameterDefinitions[i].getParamID()),
-				parameterDefinitions[i].getParameterType()
-			);
-		}
-		else {
-			pluginProcessorParameters[i] = ParameterObject(
-				parametersAPVTS.getParameter(parameterDefinitions[i].getParamID()),
-				parameterDefinitions[i].getSmoothingType()
-			);
-		}
+		pluginProcessorParameters[i] = ParameterObject(
+			parametersAPVTS.getParameter(parameterDefinitions[i].getParamID()),
+			parameterDefinitions[i].getParameterType(),
+			parameterDefinitions[i].getSmoothingType()
+		);
 	}
 }
 

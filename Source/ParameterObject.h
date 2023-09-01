@@ -18,8 +18,7 @@ public:
 	//==============================================================================
 	// -- Constructors & Destructors
 	ParameterObject();
-	ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType = ParameterType::Float);
-	ParameterObject(juce::RangedAudioParameter* parameter, SmoothingType smoothingType);
+	ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType = ParameterType::Float, SmoothingType smoothingType = SmoothingType::NoSmoothing);
 	~ParameterObject();
 
 	//==============================================================================

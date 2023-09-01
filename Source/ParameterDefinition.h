@@ -27,7 +27,8 @@ public:
 		int versionHint,
 		const juce::String& name,
 		bool defaultValue = false,
-		const juce::String& suffixLabel = ""
+		const juce::String& suffixLabel = "",
+		SmoothingType smoothingType = SmoothingType::NoSmoothing
 	);
 	// -- CHOICE CONSTRUCTOR
 	ParameterDefinition(
@@ -36,7 +37,8 @@ public:
 		const juce::String& name,
 		const juce::StringArray& choices,
 		int defaultItemIndex = 0,
-		const juce::String& suffixLabel = ""
+		const juce::String& suffixLabel = "",
+		SmoothingType smoothingType = SmoothingType::NoSmoothing
 	);
 	// -- FLOAT CONSTRUCTOR
 	ParameterDefinition(
@@ -45,8 +47,8 @@ public:
 		const juce::String& name,
 		const juce::NormalisableRange<float>& floatRange,
 		float defaultValue = 0.f,
-		SmoothingType smoothingType = SmoothingType::NoSmoothing,
-		const juce::String& suffixLabel = ""
+		const juce::String& suffixLabel = "",
+		SmoothingType smoothingType = SmoothingType::NoSmoothing
 	);
 	// -- INT CONSTRUCTOR
 	ParameterDefinition(
@@ -56,8 +58,11 @@ public:
 		int minValue,
 		int maxValue,
 		int defaultValue = 0,
-		const juce::String& suffixLabel = ""
+		const juce::String& suffixLabel = "",
+		SmoothingType smoothingType = SmoothingType::NoSmoothing
 	);
+
+	~ParameterDefinition();
 
 	//==============================================================================
 	// -- Parameter getters

@@ -9,25 +9,16 @@
 #include "ParameterObject.h"
 
 //==============================================================================
-ParameterObject::ParameterObject() : 
+ParameterObject::ParameterObject() :
 	parameter(nullptr),
 	parameterType(ParameterType::Float),
 	smoothingType(SmoothingType::NoSmoothing)
 {
 }
 
-ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType) :
+ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType, SmoothingType smoothingType) :
 	parameter(parameter),
 	parameterType(parameterType),
-	smoothingType(SmoothingType::NoSmoothing)
-{
-	// -- Update the inBound variables to initialize them
-	updateInBoundVariable();
-}
-
-ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, SmoothingType smoothingType) :
-	parameter(parameter),
-	parameterType(ParameterType::Float), // If we have smoothing it must be a continuous parameter (float). If smoothing is not needed, use the other constructor
 	smoothingType(smoothingType)
 {
 	// -- Update the inBound variables to initialize them
