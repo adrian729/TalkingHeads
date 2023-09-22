@@ -14,6 +14,7 @@
 // -- CONSTRUCTORS
 // -- DEFAULT CONSTRUCTOR
 ParameterDefinition::ParameterDefinition() :
+	controlID(ControlID::countParams), // should never be used
 	parameterID(juce::ParameterID()),
 	name(juce::String()),
 	parameterType(ParameterType::Float),
@@ -25,13 +26,15 @@ ParameterDefinition::ParameterDefinition() :
 }
 // -- BOOL
 ParameterDefinition::ParameterDefinition(
-	int id,
+	ControlID controlID,
+	juce::String id,
 	int versionHint,
 	const juce::String& name,
 	bool defaultValue,
 	const juce::String& suffixLabel,
 	SmoothingType smoothingType
 ) :
+	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Bool),
@@ -42,7 +45,8 @@ ParameterDefinition::ParameterDefinition(
 }
 // -- CHOICE CONSTRUCTOR
 ParameterDefinition::ParameterDefinition(
-	int id,
+	ControlID controlID,
+	juce::String id,
 	int versionHint,
 	const juce::String& name,
 	const juce::StringArray& choices,
@@ -50,6 +54,7 @@ ParameterDefinition::ParameterDefinition(
 	const juce::String& suffixLabel,
 	SmoothingType smoothingType
 ) :
+	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Choice),
@@ -61,7 +66,8 @@ ParameterDefinition::ParameterDefinition(
 }
 // -- FLOAT CONSTRUCTOR
 ParameterDefinition::ParameterDefinition(
-	int id,
+	ControlID controlID,
+	juce::String id,
 	int versionHint,
 	const juce::String& name,
 	const juce::NormalisableRange<float>& floatRange,
@@ -69,6 +75,7 @@ ParameterDefinition::ParameterDefinition(
 	const juce::String& suffixLabel,
 	SmoothingType smoothingType
 ) :
+	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Float),
@@ -80,7 +87,8 @@ ParameterDefinition::ParameterDefinition(
 }
 // -- INT CONSTRUCTOR
 ParameterDefinition::ParameterDefinition(
-	int id,
+	ControlID controlID,
+	juce::String id,
 	int versionHint,
 	const juce::String& name,
 	int minValue,
@@ -89,6 +97,7 @@ ParameterDefinition::ParameterDefinition(
 	const juce::String& suffixLabel,
 	SmoothingType smoothingType
 ) :
+	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
 	name(name),
 	parameterType(ParameterType::Int),
@@ -106,6 +115,11 @@ ParameterDefinition::~ParameterDefinition()
 
 //==============================================================================
 // -- Parameter getters
+ControlID ParameterDefinition::getControlID() const
+{
+	return controlID;
+}
+
 juce::ParameterID ParameterDefinition::getParameterID() const
 {
 	return parameterID;

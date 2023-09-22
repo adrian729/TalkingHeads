@@ -9,96 +9,20 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <cmath>
 #include "parameterTypes.h"
 #include "ParameterObject.h"
+#include "PluginStateManager.h"
 #include "ParameterDefinition.h"
-
-//==============================================================================
-// --- PARAMETER IDs
-enum ControlID {
-	// -- stage 1: general
-	bypass,
-	blend,
-	gain,
-	// -- stage 2: EQ filter
-	//highPassFreq,
-	//lowCutSlope,
-	//==============================================================================
-	countParams // value to keep track of the total number of parameters
-};
-// TODO: each param ID should be UNIQUE and should NEVER CHANGE once released, so better to add some mapping from ControlID to param ID and use the param ID in the apvts?
-
-//==============================================================================
-//template <typename Type>
-//class Distortion
-//{
-//public:
-//	//==============================================================================
-//	Distortion()
-//	{
-//		auto& waveshaper = processorChain.template get<waveshaperIndex>();
-//		waveshaper.functionToUse = [](Type x)
-//		{
-//			return std::tanh(x);
-//		};
-//
-//		auto& preGain = processorChain.template get<preGainIndex>();
-//		preGain.setGainDecibels(30.0f);
-//
-//		auto& postGain = processorChain.template get<postGainIndex>();
-//		postGain.setGainDecibels(-20.0f);
-//	}
-//
-//	//==============================================================================
-//	void prepare(const juce::dsp::ProcessSpec& spec)
-//	{
-//		auto& filter = processorChain.template get<filterIndex>();
-//		filter.state = FilterCoefs::makeFirstOrderHighPass(spec.sampleRate, 1000.0f);
-//
-//		processorChain.prepare(spec);
-//	}
-//
-//	//==============================================================================
-//	template <typename ProcessContext>
-//	void process(const ProcessContext& context) noexcept
-//	{
-//		processorChain.process(context);
-//	}
-//
-//	//==============================================================================
-//	void reset() noexcept
-//	{
-//		processorChain.reset();
-//	}
-//
-//private:
-//	//==============================================================================
-//	enum
-//	{
-//		filterIndex,
-//		preGainIndex,
-//		waveshaperIndex,
-//		postGainIndex
-//	};
-//
-//	using Filter = juce::dsp::StateVariableFilter::Filter<Type>;
-//	using FilterCoefs = juce::dsp::StateVariableFilter::Coefficients<Type>;
-//
-//	juce::dsp::ProcessorChain<
-//		juce::dsp::ProcessorDuplicator<Filter, FilterCoefs>,
-//		juce::dsp::Gain<Type>,
-//		juce::dsp::WaveShaper<Type>,
-//		juce::dsp::Gain<Type>
-//	> processorChain;
-//};
-
+#include "FirstStageProcessor.h"
 
 //==============================================================================
 /**
-*/
+ */
 class TalkingHeadsPluginAudioProcessor : public juce::AudioProcessor
 #if JucePlugin_Enable_ARA
-	, public juce::AudioProcessorARAExtension
+	,
+	public juce::AudioProcessorARAExtension
 #endif
 {
 public:
@@ -139,34 +63,55 @@ public:
 	void getStateInformation(juce::MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
 
+	//==============================================================================
+	void reset() override;
+
 private:
 	//==============================================================================
 	// --- Object parameters management and information
 
-	// --- Parameters definitions - make sure each item in the array matches the order of the enum
-	const std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions = createParameterDefinitions();
+	// --- Parameters definitions
+	PluginStateManager pluginStateManager{};
+	std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions = pluginStateManager.getParameterDefinitions();
+
+	const std::set<ControlID> generalControlIDs = {
+		ControlID::bypass,
+		ControlID::blend,
+		ControlID::preGain
+	};
 
 	// --- Parameters state APVTS
 	const juce::String PARAMETERS_APVTS_ID = "ParametersAPVTS";
 	juce::AudioProcessorValueTreeState parametersAPVTS;
 
 	// --- Object parameters and inBound variables
-	ParameterObject pluginProcessorParameters[ControlID::countParams];
+	std::array<ParameterObject, ControlID::countParams> pluginProcessorParameters;
 
 	//==============================================================================
 	// --- Object member variables
 
-	// -- General process
+	// --- stage 0: General -- Bypass ALL // Blend (dry/wet)
 	float bypass; // -- using a float to smooth the bypass transition
 	float blend;
-	float gain;
+	float preGain;
+
+	juce::dsp::Gain<float> preGainProcessor;
+	juce::dsp::DryWetMixer<float> blendMixer;
+	juce::AudioBuffer<float> blendMixerBuffer; // -- used to mix mono dry input with the stereo wet output
+
+	// -- stage 1 -- Gain // HPF, LPF, 3 Band EQ // 3 Band Compressor
+	FirstStageProcessor firstStageProcessor{ parameterDefinitions, pluginProcessorParameters };
+
+	//// -- TMP pitch shifter -- FOR NOW ONLY POSSIBLE DOWN, FOR UP WE NEED TO ADD LATENCY/DELAY
+	//float samplesPitchShiftFactor = 1.f; // 0.f = no shift, 1.0f = 1 octave down, 2.0f = 2 octaves down, etc.
+	//int lastBlockSize = 0;
+	//std::unique_ptr<float[]> lastBlock = nullptr;
 
 	//==============================================================================
-	const std::array<ParameterDefinition, ControlID::countParams> createParameterDefinitions();
 	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
 	void initPluginParameters();
-	void initPluginMemberVariables(double sampleRate);
+	void initPluginMemberVariables(double sampleRate, int samplesPerBlock);
 
 	//==============================================================================
 	void preProcessBlock();
@@ -175,8 +120,14 @@ private:
 	void syncInBoundVariables();
 	bool postUpdatePluginParameter(ControlID parameterID);
 
+	float getLatency();
+
 	//==============================================================================
 	float blendValues(float dry, float wet, float blend);
+	float getIndexInterpolationFactor(int originSize, int newSize);
+
+	//==============================================================================
+	juce::dsp::AudioBlock<float> createDryBlock(juce::AudioBuffer<float>& buffer, int numChannels, int numSamples);
 
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TalkingHeadsPluginAudioProcessor)

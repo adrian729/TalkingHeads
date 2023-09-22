@@ -37,7 +37,7 @@ ParameterType ParameterObject::getParameterType()
 	return parameterType;
 }
 
-juce::NormalisableRange<float>  ParameterObject::getParameterRange()
+juce::NormalisableRange<float> ParameterObject::getParameterRange()
 {
 	return parameter->getNormalisableRange();
 }
@@ -158,7 +158,7 @@ float ParameterObject::getNextValue()
 		}
 	}
 	// Denormalize value to the selected range
-	return getParameterRange().convertFrom0to1(normalizedValue);
+	return getParameterRange().convertFrom0to1(juce::jlimit(0.f, 1.f, normalizedValue));
 }
 
 void ParameterObject::setCurrentAndTargetValue(float newValue)
@@ -211,7 +211,7 @@ void ParameterObject::reset(double sampleRate, double rampLengthInSeconds)
 	switch (smoothingType)
 	{
 	case SmoothingType::Linear:
-		linearSmoothedValue.reset(sampleRate, 0.5f);
+		linearSmoothedValue.reset(sampleRate, rampLengthInSeconds);
 		break;
 	case SmoothingType::Multiplicative:
 		multiplicativeSmoothedValue.reset(sampleRate, rampLengthInSeconds);

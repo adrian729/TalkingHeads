@@ -93,7 +93,7 @@ void TalkingHeadsPluginAudioProcessor::prepareToPlay(double sampleRate, int samp
 	// -- create the parameters and inBound variables
 	initPluginParameters();
 	// -- init the member variables
-	initPluginMemberVariables(sampleRate);
+	initPluginMemberVariables(sampleRate, samplesPerBlock);
 }
 
 void TalkingHeadsPluginAudioProcessor::releaseResources()
@@ -111,17 +111,18 @@ bool TalkingHeadsPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout&
 		return false;
 	}
 
-	// Only mono/stereo are supported
-	return layouts.getMainInputChannelSet() != juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo();
+	// -- Only mono to stereo supported
+	return layouts.getMainInputChannelSet() == juce::AudioChannelSet::mono() && layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
 }
 #endif
 
-void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/)
 {
-
 	juce::ScopedNoDenormals noDenormals;
-	auto totalNumInputChannels = getTotalNumInputChannels();
-	auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+	auto busesLayout = getBusesLayout();
+	auto totalNumInputChannels = busesLayout.getMainInputChannels();
+	auto totalNumOutputChannels = busesLayout.getMainOutputChannels();
 	auto numSamples = buffer.getNumSamples();
 
 	// -- clear output channels not in use
@@ -132,39 +133,84 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
 	preProcessBlock();
 
-	// -- GENERAL STAGE
-	for (int sample = 0; sample < numSamples; ++sample) {
 
-		// -- frame: data of all channels for one sample
-		for (int channel = 0; channel < totalNumInputChannels; ++channel)
+	if (!juce::approximatelyEqual(bypass, 1.f))
+	{
+		// -- create the audio blocks and context
+		juce::dsp::AudioBlock<float> audioBlock(buffer);
+		auto monoBlock = audioBlock.getSingleChannelBlock(0); // -- get the mono block
+
+		// TODO: change so that we work with a mono block/context in the first stages, 
+		// and then check how we convert to stereo-stereo after we are done with that
+		// OR separate in different blocks/context/buffers for each voice before we mix them and apply last stages
+
+		juce::dsp::ProcessContextReplacing<float> context(audioBlock);
+
+		//const auto& inputBlock = context.getInputBlock();
+		auto& outputBlock = context.getOutputBlock();
+
+		// -- prepare dry wet mixer -- dryWetMixer needs an AudioBlock with same number of input and output channels
+		blendMixer.setWetLatency(getLatency());
+		blendMixer.pushDrySamples(createDryBlock(buffer, totalNumOutputChannels, numSamples));
+
+		// -- Process stages
+		juce::dsp::ProcessContextReplacing<float> monoContext(monoBlock);
+
+		// -- Pregain
+		preGainProcessor.process(monoContext);
+
+		// -- First stage
+		firstStageProcessor.process(monoContext);
+
+		// -- TMP dummy pitch shifter
+		//int newSize = numSamples + (int)(samplesPitchShiftFactor * numSamples);
+		//float* tmp_resampledBlock = new float[newSize];
+		//for (int i{ 0 }; i < newSize; i++)
+		//{
+		//	float indexFactor = getIndexInterpolationFactor(numSamples, newSize);
+
+		//	int x_0 = floor(i * indexFactor);
+		//	int x_1 = ceil(i * indexFactor);
+		//	int y_0 = monoBlock.getChannelPointer(0)[x_0];
+		//	int y_1 = monoBlock.getChannelPointer(0)[x_1];
+
+		//	tmp_resampledBlock[i] = (y_0 * (x_1 - i) + y_1 * (i - x_0)) / (x_1 - x_0);
+		//}
+
+		//// Crossfade last block into resampled block
+		//for (int i{ 0 }; i < lastBlockSize; i++)
+		//{
+		//	float crossFadeFactor = lastBlockSize / (lastBlockSize - i);
+		//	tmp_resampledBlock[i] = blendValues(tmp_resampledBlock[i], lastBlock[i], crossFadeFactor);
+		//}
+
+		// Fill mono block with resampled block + crossfade
+		//for (int i{ 0 }; i < numSamples; i++)
+		//{
+		//	monoBlock.getChannelPointer(0)[i] = tmp_resampledBlock[i];
+		//}
+
+		//lastBlockSize = newSize - numSamples;
+		//lastBlock = std::make_unique<float[]>(lastBlockSize);
+
+		// -- Mono to stereo -- copy the mono channel to all output channels
+		for (int i{ 1 }; i < totalNumOutputChannels; i++)
 		{
-			if (juce::approximatelyEqual(bypass, 1.f))
-			{
-				break;
-			}
-
-			auto* channelData = buffer.getWritePointer(channel);
-
-			float x_n = channelData[sample]; // -- input sample
-
-			float fx_n = gain * x_n; // -- fx process
-
-			float wet = fx_n;
-			float dry = x_n;
-			float dryWetMix = blendValues(wet, dry, blend);
-
-			channelData[sample] = blendValues(x_n, dryWetMix, bypass);
+			audioBlock.getSingleChannelBlock(i).copyFrom(monoBlock);
 		}
 
-		// -- update values that use smoothing
-		bypass = pluginProcessorParameters[ControlID::bypass].getNextValue();
-		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getNextValue());
+		// -- mix dry wet
+		blendMixer.mixWetSamples(outputBlock);
 	}
 
-
 	// TODO: we will need to convert mono to stereo later when adding space (panning etc)
-
 	postProcessBlock();
+}
+
+float TalkingHeadsPluginAudioProcessor::getIndexInterpolationFactor(int originSize, int newSize)
+{
+	// originIndex = newIndex * factor
+	return (float)(originSize - 1) / (float)(newSize - 1);
 }
 
 //==============================================================================
@@ -198,9 +244,19 @@ void TalkingHeadsPluginAudioProcessor::setStateInformation(const void* data, int
 }
 
 //==============================================================================
+void TalkingHeadsPluginAudioProcessor::reset()
+{
+	blendMixer.reset();
+	preGainProcessor.reset();
+	firstStageProcessor.reset();
+}
+
+//==============================================================================
 void TalkingHeadsPluginAudioProcessor::preProcessBlock()
 {
 	syncInBoundVariables();
+
+	firstStageProcessor.setSampleRate(getSampleRate());
 }
 
 void TalkingHeadsPluginAudioProcessor::postProcessBlock()
@@ -209,11 +265,15 @@ void TalkingHeadsPluginAudioProcessor::postProcessBlock()
 }
 
 void TalkingHeadsPluginAudioProcessor::syncInBoundVariables() {
-	for (int i = 0; i < ControlID::countParams; ++i)
+	for (auto& id : generalControlIDs)
 	{
-		pluginProcessorParameters[i].updateInBoundVariable();
-		postUpdatePluginParameter(intToEnum(i, ControlID));
+		pluginProcessorParameters[id].updateInBoundVariable();
+		postUpdatePluginParameter(id);
 	}
+
+	// -- if bypassing, add bypass to dry/wet mixer
+	blendMixer.setWetMixProportion(std::max(0.f, blend - bypass)); // -- if bypassing, all dry. bypass should smooth from 0.f to 1.f when selected.
+	// TODO: check why bypass is not smoothing and jumping to 1
 }
 
 bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID controlID)
@@ -231,9 +291,9 @@ bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID contr
 		blend = pluginProcessorParameters[ControlID::blend].getNextValue();
 		break;
 	}
-	case ControlID::gain:
+	case ControlID::preGain:
 	{
-		gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getNextValue());
+		preGainProcessor.setGainDecibels(pluginProcessorParameters[ControlID::preGain].getNextValue());
 		break;
 	}
 	default:
@@ -243,6 +303,11 @@ bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID contr
 	return true;
 }
 
+float TalkingHeadsPluginAudioProcessor::getLatency()
+{
+	return 0.f;
+}
+
 //==============================================================================
 float TalkingHeadsPluginAudioProcessor::blendValues(float wet, float dry, float blend)
 {
@@ -250,47 +315,21 @@ float TalkingHeadsPluginAudioProcessor::blendValues(float wet, float dry, float 
 }
 
 //==============================================================================
-const std::array<ParameterDefinition, ControlID::countParams> TalkingHeadsPluginAudioProcessor::createParameterDefinitions()
+juce::dsp::AudioBlock<float> TalkingHeadsPluginAudioProcessor::createDryBlock(juce::AudioBuffer<float>& buffer, int numChannels, int numSamples)
 {
-	std::array<ParameterDefinition, ControlID::countParams> tmp_parameterDefinitions;
-
-	// -- using a float to be able to smooth the bypass transition
-	tmp_parameterDefinitions[ControlID::bypass] = ParameterDefinition(
-		ControlID::bypass,
-		1,
-		"Bypass",
-		false,
-		"",
-		SmoothingType::Linear
-	);
-
-	tmp_parameterDefinitions[ControlID::blend] = ParameterDefinition(
-		ControlID::blend,
-		1,
-		"Blend",
-		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
-		1.f,
-		"",
-		SmoothingType::Linear
-	);
-
-	tmp_parameterDefinitions[ControlID::gain] = ParameterDefinition(
-		ControlID::gain,
-		1,
-		"Gain",
-		juce::NormalisableRange<float>(-24.f, 24.f, 0.01f),
-		0.f,
-		"dB",
-		SmoothingType::Linear
-	);
-
-	return tmp_parameterDefinitions;
+	auto* inputDataPointer = buffer.getReadPointer(0);
+	blendMixerBuffer.clear();
+	for (int i{ 0 }; i < numChannels; i++)
+	{
+		blendMixerBuffer.copyFrom(i, 0, inputDataPointer, numSamples);
+	}
+	return juce::dsp::AudioBlock<float>(blendMixerBuffer);
 }
 
+//==============================================================================
 juce::AudioProcessorValueTreeState::ParameterLayout TalkingHeadsPluginAudioProcessor::createParameterLayout()
 {
 	juce::AudioProcessorValueTreeState::ParameterLayout layout;
-	// TODO: check that num ids are valid XML names -------------------------------
 	for (int i{ 0 }; i < ControlID::countParams; ++i)
 	{
 		layout.add(parameterDefinitions[i].createParameter());
@@ -312,17 +351,47 @@ void TalkingHeadsPluginAudioProcessor::initPluginParameters()
 	}
 }
 
-void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRate) {
+void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRate, int samplesPerBlock)
+{
+	auto busesLayout = getBusesLayout();
+	auto totalNumOutputChannels = busesLayout.getMainOutputChannels();
+
+	juce::dsp::ProcessSpec monoSpec;
+	monoSpec.sampleRate = sampleRate;
+	monoSpec.maximumBlockSize = samplesPerBlock;
+	monoSpec.numChannels = 1;
+
 	// -- initialize the member variables
+	// -- Bypass
 	bypass = pluginProcessorParameters[ControlID::bypass].getFloatValue();
+
+	// -- Blend
+	juce::dsp::ProcessSpec mixerSpec;
+	mixerSpec.sampleRate = sampleRate;
+	mixerSpec.maximumBlockSize = samplesPerBlock;
+	mixerSpec.numChannels = totalNumOutputChannels;
+
 	blend = pluginProcessorParameters[ControlID::blend].getFloatValue();
-	gain = juce::Decibels::decibelsToGain(pluginProcessorParameters[ControlID::gain].getFloatValue());
+
+	blendMixer.setMixingRule(juce::dsp::DryWetMixingRule::linear);
+	blendMixer.setWetMixProportion(blend);
+	blendMixer.prepare(mixerSpec);
+
+	blendMixerBuffer.setSize(totalNumOutputChannels, samplesPerBlock); // -- allocate space
+	blendMixerBuffer.clear();
+
+	// -- Gain
+	preGainProcessor.setRampDurationSeconds(0.01f);
+	preGainProcessor.setGainDecibels(pluginProcessorParameters[ControlID::preGain].getFloatValue());
+	preGainProcessor.prepare(monoSpec);
+
+	// -- initialize first stage processor
+	firstStageProcessor.prepare(monoSpec);
 
 	// -- Setup smoothing
-	pluginProcessorParameters[ControlID::bypass].initSmoothing(sampleRate);
+	pluginProcessorParameters[ControlID::bypass].initSmoothing(sampleRate, 0.5f);
 	pluginProcessorParameters[ControlID::blend].initSmoothing(sampleRate);
-	pluginProcessorParameters[ControlID::gain].initSmoothing(sampleRate);
-
+	pluginProcessorParameters[ControlID::preGain].initSmoothing(sampleRate);
 }
 
 //==============================================================================

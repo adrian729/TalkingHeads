@@ -23,7 +23,8 @@ public:
 	ParameterDefinition();
 	// -- BOOL
 	ParameterDefinition(
-		int id,
+		ControlID controlID,
+		juce::String id,
 		int versionHint,
 		const juce::String& name,
 		bool defaultValue = false,
@@ -32,7 +33,8 @@ public:
 	);
 	// -- CHOICE CONSTRUCTOR
 	ParameterDefinition(
-		int id,
+		ControlID controlID,
+		juce::String id,
 		int versionHint,
 		const juce::String& name,
 		const juce::StringArray& choices,
@@ -42,7 +44,8 @@ public:
 	);
 	// -- FLOAT CONSTRUCTOR
 	ParameterDefinition(
-		int id,
+		ControlID controlID,
+		juce::String id,
 		int versionHint,
 		const juce::String& name,
 		const juce::NormalisableRange<float>& floatRange,
@@ -52,7 +55,8 @@ public:
 	);
 	// -- INT CONSTRUCTOR
 	ParameterDefinition(
-		int id,
+		ControlID controlID,
+		juce::String id,
 		int versionHint,
 		const juce::String& name,
 		int minValue,
@@ -66,6 +70,8 @@ public:
 
 	//==============================================================================
 	// -- Parameter getters
+	ControlID getControlID() const;
+
 	juce::ParameterID getParameterID() const;
 
 	juce::String getParamID() const;
@@ -104,6 +110,7 @@ public:
 private:
 	//==============================================================================
 	// -- Basic parameter info
+	ControlID controlID;
 	juce::ParameterID parameterID;
 	juce::String name;
 

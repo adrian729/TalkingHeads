@@ -5,6 +5,10 @@
               pluginVST3Category="EQ,Fx,Modulation">
   <MAINGROUP id="ReKlOL" name="TalkingHeads">
     <GROUP id="{3B98639A-39C4-21A4-0925-BF127ED63BBC}" name="Source">
+      <FILE id="caQeHY" name="PluginStateManager.cpp" compile="1" resource="0"
+            file="Source/PluginStateManager.cpp"/>
+      <FILE id="v0g21N" name="PluginStateManager.h" compile="0" resource="0"
+            file="Source/PluginStateManager.h"/>
       <GROUP id="{5FD2E85E-F008-F552-1E43-46D474952C24}" name="DSPProcessors">
         <FILE id="uYYXa9" name="FirstStageProcessor.cpp" compile="1" resource="0"
               file="Source/FirstStageProcessor.cpp"/>
