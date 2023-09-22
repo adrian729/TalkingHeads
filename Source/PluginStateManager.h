@@ -31,7 +31,11 @@ public:
 private:
 	//==============================================================================
 	// --- Parameters definitions - make sure each item in the array matches the order of the enum
-	std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions = createParameterDefinitions();
+	static std::array<juce::String, ControlID::countParams> paramIDs;
+	static std::array<juce::String, ControlID::countParams> paramNames;
+	static std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions;
 
-	std::array<ParameterDefinition, ControlID::countParams> createParameterDefinitions();
+	static std::array<juce::String, ControlID::countParams> createParamIDs();
+	static std::array<juce::String, ControlID::countParams> createParamNames();
+	static std::array<ParameterDefinition, ControlID::countParams> createParameterDefinitions();
 };

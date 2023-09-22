@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-	FirstStageProcessor.h
+	MultiBandEQ.h
 	Created: 1 Sep 2023 1:02:02pm
 	Author:  Brutus729
 
@@ -18,17 +18,17 @@
 #include "ParameterObject.h"
 
 //==============================================================================
-class FirstStageProcessor : public juce::dsp::ProcessorBase
+class MultiBandEQ : public juce::dsp::ProcessorBase
 {
 public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	FirstStageProcessor(
+	MultiBandEQ(
 		std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
 		std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)
 	);
-	~FirstStageProcessor();
+	~MultiBandEQ();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -36,18 +36,13 @@ public:
 	void reset() override;
 
 	//==============================================================================
-	void preProcess();
-	void postProcess();
-
-	void syncInBoundVariables();
-	bool postUpdatePluginParameter(ControlID controlID);
-
 	float getLatency();
 
 	//==============================================================================
 	void setSampleRate(double sampleRate);
 
 private:
+	// TODO: abstract the class from the processor stage of the plugin so that it can be used separately
 	//==============================================================================
 	// --- Object parameters management and information
 	const std::set<ControlID> firstStageControlIDs = {
@@ -150,4 +145,11 @@ private:
 
 	template <typename CoefficientType>
 	void updatePassFilter(PassFilter& passFilter, CoefficientType& coefficients, const Slope& cutSlope);
+
+	//==============================================================================
+	void preProcess();
+	void postProcess();
+
+	void syncInBoundVariables();
+	bool postUpdatePluginParameter(ControlID controlID);
 };

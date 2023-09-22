@@ -159,8 +159,10 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 		// -- Pregain
 		preGainProcessor.process(monoContext);
 
-		// -- First stage
+		// -- First stage -- EQ
 		firstStageProcessor.process(monoContext);
+		// -- Second stage -- Compressor
+		secondStageProcessor.process(monoContext);
 
 		// -- TMP dummy pitch shifter
 		//int newSize = numSamples + (int)(samplesPitchShiftFactor * numSamples);
@@ -273,7 +275,6 @@ void TalkingHeadsPluginAudioProcessor::syncInBoundVariables() {
 
 	// -- if bypassing, add bypass to dry/wet mixer
 	blendMixer.setWetMixProportion(std::max(0.f, blend - bypass)); // -- if bypassing, all dry. bypass should smooth from 0.f to 1.f when selected.
-	// TODO: check why bypass is not smoothing and jumping to 1
 }
 
 bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID controlID)
@@ -283,17 +284,17 @@ bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID contr
 	{
 	case ControlID::bypass:
 	{
-		bypass = pluginProcessorParameters[ControlID::bypass].getNextValue();
+		bypass = pluginProcessorParameters[controlID].getNextValue();
 		break;
 	}
 	case ControlID::blend:
 	{
-		blend = pluginProcessorParameters[ControlID::blend].getNextValue();
+		blend = pluginProcessorParameters[controlID].getNextValue();
 		break;
 	}
 	case ControlID::preGain:
 	{
-		preGainProcessor.setGainDecibels(pluginProcessorParameters[ControlID::preGain].getNextValue());
+		preGainProcessor.setGainDecibels(pluginProcessorParameters[controlID].getFloatValue());
 		break;
 	}
 	default:
@@ -388,10 +389,12 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 	// -- initialize first stage processor
 	firstStageProcessor.prepare(monoSpec);
 
+	// -- initialize first stage processor
+	secondStageProcessor.prepare(monoSpec);
+
 	// -- Setup smoothing
-	pluginProcessorParameters[ControlID::bypass].initSmoothing(sampleRate, 0.5f);
+	pluginProcessorParameters[ControlID::bypass].initSmoothing(sampleRate, 0.01f);
 	pluginProcessorParameters[ControlID::blend].initSmoothing(sampleRate);
-	pluginProcessorParameters[ControlID::preGain].initSmoothing(sampleRate);
 }
 
 //==============================================================================

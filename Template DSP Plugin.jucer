@@ -10,10 +10,12 @@
       <FILE id="v0g21N" name="PluginStateManager.h" compile="0" resource="0"
             file="Source/PluginStateManager.h"/>
       <GROUP id="{5FD2E85E-F008-F552-1E43-46D474952C24}" name="DSPProcessors">
-        <FILE id="uYYXa9" name="FirstStageProcessor.cpp" compile="1" resource="0"
-              file="Source/FirstStageProcessor.cpp"/>
-        <FILE id="rEMhS9" name="FirstStageProcessor.h" compile="0" resource="0"
-              file="Source/FirstStageProcessor.h"/>
+        <FILE id="F6YM8R" name="MultiBandCompressor.cpp" compile="1" resource="0"
+              file="Source/MultiBandCompressor.cpp"/>
+        <FILE id="xjGEtp" name="MultiBandCompressor.h" compile="0" resource="0"
+              file="Source/MultiBandCompressor.h"/>
+        <FILE id="uYYXa9" name="MultiBandEQ.cpp" compile="1" resource="0" file="Source/MultiBandEQ.cpp"/>
+        <FILE id="rEMhS9" name="MultiBandEQ.h" compile="0" resource="0" file="Source/MultiBandEQ.h"/>
       </GROUP>
       <GROUP id="{EEF93889-7709-BAD3-6992-50B88172DB66}" name="Parameter">
         <FILE id="CAhcVx" name="ParameterObject.cpp" compile="1" resource="0"

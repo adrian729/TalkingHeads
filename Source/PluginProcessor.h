@@ -11,10 +11,11 @@
 #include <JuceHeader.h>
 #include <cmath>
 #include "parameterTypes.h"
-#include "ParameterObject.h"
 #include "PluginStateManager.h"
+#include "ParameterObject.h"
 #include "ParameterDefinition.h"
-#include "FirstStageProcessor.h"
+#include "MultiBandEQ.h"
+#include "MultiBandCompressor.h"
 
 //==============================================================================
 /**
@@ -93,14 +94,14 @@ private:
 	// --- stage 0: General -- Bypass ALL // Blend (dry/wet)
 	float bypass; // -- using a float to smooth the bypass transition
 	float blend;
-	float preGain;
 
 	juce::dsp::Gain<float> preGainProcessor;
 	juce::dsp::DryWetMixer<float> blendMixer;
 	juce::AudioBuffer<float> blendMixerBuffer; // -- used to mix mono dry input with the stereo wet output
 
 	// -- stage 1 -- Gain // HPF, LPF, 3 Band EQ // 3 Band Compressor
-	FirstStageProcessor firstStageProcessor{ parameterDefinitions, pluginProcessorParameters };
+	MultiBandEQ firstStageProcessor{ parameterDefinitions, pluginProcessorParameters };
+	MultiBandCompressor secondStageProcessor{ parameterDefinitions, pluginProcessorParameters };
 
 	//// -- TMP pitch shifter -- FOR NOW ONLY POSSIBLE DOWN, FOR UP WE NEED TO ADD LATENCY/DELAY
 	//float samplesPitchShiftFactor = 1.f; // 0.f = no shift, 1.0f = 1 octave down, 2.0f = 2 octaves down, etc.
