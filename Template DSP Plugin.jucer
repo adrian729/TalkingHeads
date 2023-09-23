@@ -10,6 +10,10 @@
       <FILE id="v0g21N" name="PluginStateManager.h" compile="0" resource="0"
             file="Source/PluginStateManager.h"/>
       <GROUP id="{5FD2E85E-F008-F552-1E43-46D474952C24}" name="DSPProcessors">
+        <FILE id="e9i6FE" name="CompressorBand.cpp" compile="1" resource="0"
+              file="Source/CompressorBand.cpp"/>
+        <FILE id="nm4go6" name="CompressorBand.h" compile="0" resource="0"
+              file="Source/CompressorBand.h"/>
         <FILE id="F6YM8R" name="MultiBandCompressor.cpp" compile="1" resource="0"
               file="Source/MultiBandCompressor.cpp"/>
         <FILE id="xjGEtp" name="MultiBandCompressor.h" compile="0" resource="0"

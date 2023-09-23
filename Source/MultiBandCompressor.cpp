@@ -20,6 +20,17 @@ MultiBandCompressor::MultiBandCompressor(
 	parameterDefinitions(&parameterDefinitions),
 	pluginProcessorParameters(&pluginProcessorParameters)
 {
+	// -- Low Band Compressor
+	auto& lowBandCompressor = processorChain.template get<lowBandCompressorChainIndex>();
+	lowBandCompressor.setupCompressorBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::lowBandCompressorBypass,
+		ControlID::lowBandCompressorThreshold,
+		ControlID::lowBandCompressorAttack,
+		ControlID::lowBandCompressorRelease,
+		ControlID::lowBandCompressorRatio
+	);
 }
 
 MultiBandCompressor::~MultiBandCompressor()
@@ -33,31 +44,61 @@ void MultiBandCompressor::prepare(const juce::dsp::ProcessSpec& spec)
 {
 	auto sampleRate = spec.sampleRate;
 
+	// -- Band Filters
+	lowMidCrossoverFreq = (*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].getFloatValue();
+
+	LP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
+	HP.setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+
+	LP.setCutoffFrequency(lowMidCrossoverFreq);
+	HP.setCutoffFrequency(lowMidCrossoverFreq);
+
+	LP.prepare(spec);
+	HP.prepare(spec);
+
+	for (juce::AudioBuffer<float>& buffer : filterBuffers)
+	{
+		buffer.setSize(spec.numChannels, spec.maximumBlockSize);
+		buffer.clear();
+	}
+
 	// -- Low Band Compressor
-	auto& compressor = processorChain.template get<lowBandCompressorChainIndex>();
-	compressor.setThreshold((*pluginProcessorParameters)[ControlID::lowBandCompressorThreshold].getNextValue());
-	compressor.setAttack((*pluginProcessorParameters)[ControlID::lowBandCompressorAttack].getNextValue());
-	compressor.setRelease((*pluginProcessorParameters)[ControlID::lowBandCompressorRelease].getNextValue());
-	compressor.setRatio((*pluginProcessorParameters)[ControlID::lowBandCompressorRatio].getNextValue());
+	lowBandCompressorBypass = (*pluginProcessorParameters)[ControlID::lowBandCompressorBypass].getFloatValue();
 
 	// -- Chain
 	processorChain.prepare(spec);
 
-	// TODO: check smoothings are working, it makes noises
-	// -- Setup smoothing
-	(*pluginProcessorParameters)[ControlID::lowBandCompressorThreshold].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::lowBandCompressorAttack].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::lowBandCompressorRelease].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::lowBandCompressorRatio].initSmoothing(sampleRate);
+	// -- bypass smoothing is already initialized in the CompressorBand
 }
 
 void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float>& context)
 {
 	preProcess();
 
-	processorChain.process(context);
+	juce::dsp::AudioBlock<const float> inputBlock = context.getInputBlock();
+	juce::dsp::AudioBlock<float> outputBlock = context.getOutputBlock();
 
-	postProcess();
+	for (juce::AudioBuffer<float>& buffer : filterBuffers)
+	{
+		for (int channel{ 0 }; channel < inputBlock.getNumChannels(); ++channel)
+		{
+			buffer.copyFrom(channel, 0, inputBlock.getChannelPointer(channel), buffer.getNumSamples());
+		}
+	}
+
+	juce::dsp::AudioBlock<float> lpBlock(filterBuffers[0]);
+	juce::dsp::AudioBlock<float> hpBlock(filterBuffers[1]);
+	juce::dsp::ProcessContextReplacing<float> lpContext(lpBlock);
+	juce::dsp::ProcessContextReplacing<float> hpContext(hpBlock);
+
+	LP.process(lpContext);
+	HP.process(hpContext);
+
+	outputBlock.clear();
+	outputBlock.copyFrom(lpBlock);
+	outputBlock.add(hpBlock);
+
+	processorChain.process(context);
 }
 
 void MultiBandCompressor::reset()
@@ -68,7 +109,10 @@ void MultiBandCompressor::reset()
 //==============================================================================
 float MultiBandCompressor::getLatency()
 {
-	return 0.f;
+	float latency = 0.f;
+	latency += processorChain.template get<lowBandCompressorChainIndex>().getLatency();
+
+	return latency;
 }
 
 //==============================================================================
@@ -79,55 +123,22 @@ void MultiBandCompressor::preProcess()
 
 void MultiBandCompressor::syncInBoundVariables()
 {
-	for (auto& id : firstStageControlIDs)
+	for (ControlID id : multiBandCompressorIDs)
 	{
 		(*pluginProcessorParameters)[id].updateInBoundVariable();
-		postUpdatePluginParameter(id);
 	}
+
+	postUpdatePluginParameters();
 }
 
-bool MultiBandCompressor::postUpdatePluginParameter(ControlID controlID)
+void MultiBandCompressor::postUpdatePluginParameters()
 {
-	switch (controlID)
-	{
-		// -- Low Band Compressor
-	case ControlID::lowBandCompressorBypass:
-	{
-		processorChain.template setBypassed<lowBandCompressorChainIndex>((*pluginProcessorParameters)[controlID].getBoolValue());
-		break;
-	}
-	case ControlID::lowBandCompressorThreshold:
-	{
-		auto& compressor = processorChain.template get<lowBandCompressorChainIndex>();
-		compressor.setThreshold((*pluginProcessorParameters)[controlID].getNextValue());
-		break;
-	}
-	case ControlID::lowBandCompressorAttack:
-	{
-		auto& compressor = processorChain.template get<lowBandCompressorChainIndex>();
-		compressor.setAttack((*pluginProcessorParameters)[controlID].getNextValue());
-		break;
-	}
-	case ControlID::lowBandCompressorRelease:
-	{
-		auto& compressor = processorChain.template get<lowBandCompressorChainIndex>();
-		compressor.setRelease((*pluginProcessorParameters)[controlID].getNextValue());
-		break;
-	}
-	case ControlID::lowBandCompressorRatio:
-	{
-		auto& compressor = processorChain.template get<lowBandCompressorChainIndex>();
-		compressor.setRatio((*pluginProcessorParameters)[controlID].getNextValue());
-		break;
-	}
+	// -- Band Filters
+	lowMidCrossoverFreq = (*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].getNextValue();
+	LP.setCutoffFrequency(lowMidCrossoverFreq);
+	HP.setCutoffFrequency(lowMidCrossoverFreq);
 
-	default:
-		return false;
-	}
-
-	return true;
-}
-
-void MultiBandCompressor::postProcess()
-{
+	// -- Low Band Compressor
+	lowBandCompressorBypass = (*pluginProcessorParameters)[ControlID::lowBandCompressorBypass].getNextValue();
+	processorChain.template setBypassed<lowBandCompressorChainIndex>(juce::approximatelyEqual(lowBandCompressorBypass, 1.f));
 }

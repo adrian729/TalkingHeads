@@ -67,11 +67,14 @@ std::array<juce::String, ControlID::countParams> PluginStateManager::createParam
 	tmp_paramIDs[ControlID::bandFilter3PeakQ] = "bandFilter3PeakQ";
 
 	// -- stage 2 -- 3 Band Compressor
+	// -- Low Band Compressor
 	tmp_paramIDs[ControlID::lowBandCompressorBypass] = "lowBandCompressorBypass";
 	tmp_paramIDs[ControlID::lowBandCompressorThreshold] = "lowBandCompressorThreshold";
 	tmp_paramIDs[ControlID::lowBandCompressorAttack] = "lowBandCompressorAttack";
 	tmp_paramIDs[ControlID::lowBandCompressorRelease] = "lowBandCompressorRelease";
 	tmp_paramIDs[ControlID::lowBandCompressorRatio] = "lowBandCompressorRatio";
+	// -- Low-Mid Crossover
+	tmp_paramIDs[ControlID::lowMidCrossoverFreq] = "lowMidCrossoverFreq";
 
 	return tmp_paramIDs;
 }
@@ -117,6 +120,8 @@ std::array<juce::String, ControlID::countParams> PluginStateManager::createParam
 	tmp_paramNames[ControlID::lowBandCompressorAttack] = "Low Band Compressor Attack";
 	tmp_paramNames[ControlID::lowBandCompressorRelease] = "Low Band Compressor Release";
 	tmp_paramNames[ControlID::lowBandCompressorRatio] = "Low Band Compressor Ratio";
+	// -- Low-Mid Crossover
+	tmp_paramNames[ControlID::lowMidCrossoverFreq] = "Low-Mid Crossover Freq";
 
 	return tmp_paramNames;
 }
@@ -378,7 +383,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 		paramNames[ControlID::lowBandCompressorBypass],
 		false,
 		"",
-		SmoothingType::NoSmoothing
+		SmoothingType::Linear
 	);
 
 	tmp_parameterDefinitions[ControlID::lowBandCompressorThreshold] = ParameterDefinition(
@@ -422,6 +427,18 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 		ratioRange,
 		1.f,
 		"",
+		SmoothingType::Linear
+	);
+
+	// -- Low-Mid Crossover
+	tmp_parameterDefinitions[ControlID::lowMidCrossoverFreq] = ParameterDefinition(
+		ControlID::lowMidCrossoverFreq,
+		paramIDs[ControlID::lowMidCrossoverFreq],
+		1,
+		paramNames[ControlID::lowMidCrossoverFreq],
+		freqRange,
+		500.f,
+		"Hz",
 		SmoothingType::Linear
 	);
 

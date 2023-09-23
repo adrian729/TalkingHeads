@@ -47,7 +47,7 @@ public:
 
 	//==============================================================================
 	// -- Smoothing
-	void initSmoothing(double sampleRate, double rampLengthInSeconds = 0.002f);
+	void initSmoothing(double sampleRate, double rampLengthInSeconds = 0.005f);
 
 	float getCurrentValue();
 	float getNextValue();

@@ -1,8 +1,8 @@
 /*
   ==============================================================================
 
-	MultiBandCompressor.h
-	Created: 22 Sep 2023 5:01:45pm
+	CompressorBand.h
+	Created: 23 Sep 2023 1:20:20pm
 	Author:  Brutus729
 
   ==============================================================================
@@ -14,20 +14,15 @@
 #include "parameterTypes.h"
 #include "ParameterDefinition.h"
 #include "ParameterObject.h"
-#include "CompressorBand.h"
 
-//==============================================================================
-class MultiBandCompressor : public juce::dsp::ProcessorBase
+class CompressorBand : public  juce::dsp::ProcessorBase
 {
 public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	MultiBandCompressor(
-		std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
-		std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)
-	);
-	~MultiBandCompressor();
+	CompressorBand();
+	~CompressorBand();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -37,47 +32,36 @@ public:
 	//==============================================================================
 	float getLatency();
 
+	//==============================================================================
+	void setupCompressorBand(
+		std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
+		std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+		ControlID bypassID,
+		ControlID thresholdID,
+		ControlID attackID,
+		ControlID releaseID,
+		ControlID ratioID
+	);
+
 private:
-	// TODO: abstract the class from the processor stage of the plugin so that it can be used separately
 	//==============================================================================
 	// --- Object parameters management and information
-	const std::set<ControlID> multiBandCompressorIDs = {
-		// -- Low Band Compressor
-		ControlID::lowBandCompressorBypass,
-		// -- Mid Band Compressor
-		// -- High Band Compressor
-	};
+	std::set<ControlID> compressorBandControlIDs;
 
 	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
 	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };
 
 	//==============================================================================
 	// --- Object member variables
+	ControlID bypassID{ ControlID::countParams };
+	ControlID thresholdID{ ControlID::countParams };
+	ControlID attackID{ ControlID::countParams };
+	ControlID releaseID{ ControlID::countParams };
+	ControlID ratioID{ ControlID::countParams };
 
-	// -- Band filters
-	float lowMidCrossoverFreq{ 0.f };
-	// -- Low Band Compressor
-	float lowBandCompressorBypass{ 0.f };
+	float bypass{ 0.f };
 
-	//==============================================================================
-	// -- Band filters
-	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
-
-	//      fc0     fc1
-	Filter  LP, HP;
-
-	std::array<juce::AudioBuffer<float>, 2> filterBuffers;
-
-
-	// -- Processor Chain
-	enum chainIndex
-	{
-		lowBandCompressorChainIndex,
-		//midBandCompressorChainIndex,
-		//highBandCompressorChainIndex
-	};
-
-	juce::dsp::ProcessorChain<CompressorBand> processorChain;
+	juce::dsp::Compressor<float> compressor;
 
 	//==============================================================================
 	void preProcess();

@@ -75,6 +75,8 @@ enum ControlID
 	lowBandCompressorAttack,
 	lowBandCompressorRelease,
 	lowBandCompressorRatio,
+	// -- Low-Mid Crossover
+	lowMidCrossoverFreq,
 	// -- Mid Band Compressor
 	// -- High Band Compressor
 
