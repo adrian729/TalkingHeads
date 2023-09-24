@@ -21,8 +21,7 @@ MultiBandCompressor::MultiBandCompressor(
 	pluginProcessorParameters(&pluginProcessorParameters)
 {
 	// -- Low Band Compressor
-	auto& lowBandCompressor = processorChain.template get<lowBandCompressorChainIndex>();
-	lowBandCompressor.setupCompressorBand(
+	compressorBands[BandIDs::lowBand].setupCompressorBand(
 		parameterDefinitions,
 		pluginProcessorParameters,
 		ControlID::lowBandCompressorBypass,
@@ -30,6 +29,28 @@ MultiBandCompressor::MultiBandCompressor(
 		ControlID::lowBandCompressorAttack,
 		ControlID::lowBandCompressorRelease,
 		ControlID::lowBandCompressorRatio
+	);
+
+	// -- Mid Band Compressor
+	compressorBands[BandIDs::midBand].setupCompressorBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::midBandCompressorBypass,
+		ControlID::midBandCompressorThreshold,
+		ControlID::midBandCompressorAttack,
+		ControlID::midBandCompressorRelease,
+		ControlID::midBandCompressorRatio
+	);
+
+	// -- High Band Compressor
+	compressorBands[BandIDs::highBand].setupCompressorBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::highBandCompressorBypass,
+		ControlID::highBandCompressorThreshold,
+		ControlID::highBandCompressorAttack,
+		ControlID::highBandCompressorRelease,
+		ControlID::highBandCompressorRatio
 	);
 }
 
@@ -45,30 +66,48 @@ void MultiBandCompressor::prepare(const juce::dsp::ProcessSpec& spec)
 	auto sampleRate = spec.sampleRate;
 
 	// -- Band Filters
+	// -- Low-Mid
 	lowMidCrossoverFreq = (*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].getFloatValue();
 
-	LP.setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
-	HP.setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+	bandFilters[FilterIDs::lowpass1].setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
+	bandFilters[FilterIDs::lowpass1].setCutoffFrequency(lowMidCrossoverFreq);
 
-	LP.setCutoffFrequency(lowMidCrossoverFreq);
-	HP.setCutoffFrequency(lowMidCrossoverFreq);
+	bandFilters[FilterIDs::highpass1].setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+	bandFilters[FilterIDs::highpass1].setCutoffFrequency(lowMidCrossoverFreq);
 
-	LP.prepare(spec);
-	HP.prepare(spec);
+	// -- Mid-High
+	midHighCrossoverFreq = (*pluginProcessorParameters)[ControlID::midHighCrossoverFreq].getFloatValue();
 
+	bandFilters[FilterIDs::allpass].setType(juce::dsp::LinkwitzRileyFilterType::allpass);
+	bandFilters[FilterIDs::allpass].setCutoffFrequency(midHighCrossoverFreq);
+
+	bandFilters[FilterIDs::lowpass2].setType(juce::dsp::LinkwitzRileyFilterType::lowpass);
+	bandFilters[FilterIDs::lowpass2].setCutoffFrequency(midHighCrossoverFreq);
+
+	bandFilters[FilterIDs::highpass2].setType(juce::dsp::LinkwitzRileyFilterType::highpass);
+	bandFilters[FilterIDs::highpass2].setCutoffFrequency(midHighCrossoverFreq);
+
+	for (auto& filter : bandFilters)
+	{
+		filter.prepare(spec);
+	}
+
+	// -- Filter buffers
 	for (juce::AudioBuffer<float>& buffer : filterBuffers)
 	{
 		buffer.setSize(spec.numChannels, spec.maximumBlockSize);
 		buffer.clear();
 	}
 
-	// -- Low Band Compressor
-	lowBandCompressorBypass = (*pluginProcessorParameters)[ControlID::lowBandCompressorBypass].getFloatValue();
+	// -- Compressor bands
+	for (CompressorBand& band : compressorBands)
+	{
+		band.prepare(spec);
+	}
 
-	// -- Chain
-	processorChain.prepare(spec);
-
-	// -- bypass smoothing is already initialized in the CompressorBand
+	// -- Setup smoothing
+	(*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].initSmoothing(sampleRate);
+	(*pluginProcessorParameters)[ControlID::midHighCrossoverFreq].initSmoothing(sampleRate);
 }
 
 void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float>& context)
@@ -86,31 +125,55 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 		}
 	}
 
-	juce::dsp::AudioBlock<float> lpBlock(filterBuffers[0]);
-	juce::dsp::AudioBlock<float> hpBlock(filterBuffers[1]);
-	juce::dsp::ProcessContextReplacing<float> lpContext(lpBlock);
-	juce::dsp::ProcessContextReplacing<float> hpContext(hpBlock);
+	for (int i{ 0 }; i < BandIDs::countBands; ++i)
+	{
+		filterBlocks[i] = juce::dsp::AudioBlock<float>(filterBuffers[i]);
+	}
 
-	LP.process(lpContext);
-	HP.process(hpContext);
+	juce::dsp::ProcessContextReplacing<float> lowBandContext(filterBlocks[BandIDs::lowBand]);
+	juce::dsp::ProcessContextReplacing<float> midBandContext(filterBlocks[BandIDs::midBand]);
+	juce::dsp::ProcessContextReplacing<float> highBandContext(filterBlocks[BandIDs::highBand]);
+
+	// -- Low Band Filter
+	bandFilters[FilterIDs::lowpass1].process(lowBandContext);
+	bandFilters[FilterIDs::allpass].process(lowBandContext);
+
+	// -- Mid Band/High Band Filter
+	bandFilters[FilterIDs::highpass1].process(midBandContext);
+	filterBuffers[2] = filterBuffers[1]; // -- copy midBandBuffer with highpass1 to highBandBuffer
+	bandFilters[FilterIDs::lowpass2].process(midBandContext);
+	bandFilters[FilterIDs::highpass2].process(highBandContext);
+
+	for (int i{ 0 }; i < BandIDs::countBands; ++i)
+	{
+		compressorBands[i].process(filterBlocks[i]);
+	}
 
 	outputBlock.clear();
-	outputBlock.copyFrom(lpBlock);
-	outputBlock.add(hpBlock);
+	for (auto& filterBlock : filterBlocks)
+	{
+		outputBlock.add(filterBlock);
+	}
 
-	processorChain.process(context);
+
 }
 
 void MultiBandCompressor::reset()
 {
-	processorChain.reset();
+	for (CompressorBand& band : compressorBands)
+	{
+		band.reset();
+	}
 }
 
 //==============================================================================
 float MultiBandCompressor::getLatency()
 {
 	float latency = 0.f;
-	latency += processorChain.template get<lowBandCompressorChainIndex>().getLatency();
+	for (CompressorBand& band : compressorBands)
+	{
+		latency += band.getLatency();
+	}
 
 	return latency;
 }
@@ -133,12 +196,16 @@ void MultiBandCompressor::syncInBoundVariables()
 
 void MultiBandCompressor::postUpdatePluginParameters()
 {
-	// -- Band Filters
+	// -- Low-Mid
 	lowMidCrossoverFreq = (*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].getNextValue();
-	LP.setCutoffFrequency(lowMidCrossoverFreq);
-	HP.setCutoffFrequency(lowMidCrossoverFreq);
 
-	// -- Low Band Compressor
-	lowBandCompressorBypass = (*pluginProcessorParameters)[ControlID::lowBandCompressorBypass].getNextValue();
-	processorChain.template setBypassed<lowBandCompressorChainIndex>(juce::approximatelyEqual(lowBandCompressorBypass, 1.f));
+	bandFilters[FilterIDs::lowpass1].setCutoffFrequency(lowMidCrossoverFreq);
+	bandFilters[FilterIDs::highpass1].setCutoffFrequency(lowMidCrossoverFreq);
+
+	// -- Mid-High
+	midHighCrossoverFreq = (*pluginProcessorParameters)[ControlID::midHighCrossoverFreq].getNextValue();
+
+	bandFilters[FilterIDs::allpass].setCutoffFrequency(midHighCrossoverFreq);
+	bandFilters[FilterIDs::lowpass2].setCutoffFrequency(midHighCrossoverFreq);
+	bandFilters[FilterIDs::highpass2].setCutoffFrequency(midHighCrossoverFreq);
 }

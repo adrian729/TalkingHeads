@@ -42,10 +42,10 @@ private:
 	//==============================================================================
 	// --- Object parameters management and information
 	const std::set<ControlID> multiBandCompressorIDs = {
-		// -- Low Band Compressor
-		ControlID::lowBandCompressorBypass,
-		// -- Mid Band Compressor
-		// -- High Band Compressor
+		// -- Low-mid crossover
+		ControlID::lowMidCrossoverFreq,
+		// -- Mid-high crossover
+		ControlID::midHighCrossoverFreq
 	};
 
 	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
@@ -56,28 +56,41 @@ private:
 
 	// -- Band filters
 	float lowMidCrossoverFreq{ 0.f };
-	// -- Low Band Compressor
-	float lowBandCompressorBypass{ 0.f };
+	float midHighCrossoverFreq{ 0.f };
 
 	//==============================================================================
 	// -- Band filters
 	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
 
-	//      fc0     fc1
-	Filter  LP, HP;
-
-	std::array<juce::AudioBuffer<float>, 2> filterBuffers;
-
-
-	// -- Processor Chain
-	enum chainIndex
+	// -- Low band filter -- lowpass1 -> allpass = lowpass band (----\) -- we add an allpass to avoid phase issues, since each filter adds a small delay and we need 2 filters for the mid crossover
+	// -- mid band filter -- highpass1 -> lowpass2 = mid band (/---\)
+	// -- high band filter -- highpass1 -> highpass2 = highpass band (/----)
+	enum FilterIDs
 	{
-		lowBandCompressorChainIndex,
-		//midBandCompressorChainIndex,
-		//highBandCompressorChainIndex
-	};
+		lowpass1,
+		allpass,
 
-	juce::dsp::ProcessorChain<CompressorBand> processorChain;
+		highpass1,
+		lowpass2,
+
+		highpass2,
+		// -- Count
+		countFilters
+	};
+	std::array<Filter, FilterIDs::countFilters> bandFilters;
+
+	// -- 0: low band, 1: mid band, 2: high band
+	enum BandIDs
+	{
+		lowBand,
+		midBand,
+		highBand,
+		// -- Count
+		countBands
+	};
+	std::array<juce::AudioBuffer<float>, BandIDs::countBands> filterBuffers;
+	std::array<juce::dsp::AudioBlock<float>, BandIDs::countBands> filterBlocks;
+	std::array<CompressorBand, 3> compressorBands;
 
 	//==============================================================================
 	void preProcess();

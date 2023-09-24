@@ -78,7 +78,19 @@ enum ControlID
 	// -- Low-Mid Crossover
 	lowMidCrossoverFreq,
 	// -- Mid Band Compressor
+	midBandCompressorBypass,
+	midBandCompressorThreshold,
+	midBandCompressorAttack,
+	midBandCompressorRelease,
+	midBandCompressorRatio,
+	// -- Mid-High Crossover
+	midHighCrossoverFreq,
 	// -- High Band Compressor
+	highBandCompressorBypass,
+	highBandCompressorThreshold,
+	highBandCompressorAttack,
+	highBandCompressorRelease,
+	highBandCompressorRatio,
 
 	//==============================================================================
 	countParams // value to keep track of the total number of parameters

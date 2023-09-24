@@ -75,6 +75,20 @@ std::array<juce::String, ControlID::countParams> PluginStateManager::createParam
 	tmp_paramIDs[ControlID::lowBandCompressorRatio] = "lowBandCompressorRatio";
 	// -- Low-Mid Crossover
 	tmp_paramIDs[ControlID::lowMidCrossoverFreq] = "lowMidCrossoverFreq";
+	// -- Mid Band Compressor
+	tmp_paramIDs[ControlID::midBandCompressorBypass] = "midBandCompressorBypass";
+	tmp_paramIDs[ControlID::midBandCompressorThreshold] = "midBandCompressorThreshold";
+	tmp_paramIDs[ControlID::midBandCompressorAttack] = "midBandCompressorAttack";
+	tmp_paramIDs[ControlID::midBandCompressorRelease] = "midBandCompressorRelease";
+	tmp_paramIDs[ControlID::midBandCompressorRatio] = "midBandCompressorRatio";
+	// -- Mid-High Crossover
+	tmp_paramIDs[ControlID::midHighCrossoverFreq] = "midHighCrossoverFreq";
+	// -- High Band Compressor
+	tmp_paramIDs[ControlID::highBandCompressorBypass] = "highBandCompressorBypass";
+	tmp_paramIDs[ControlID::highBandCompressorThreshold] = "highBandCompressorThreshold";
+	tmp_paramIDs[ControlID::highBandCompressorAttack] = "highBandCompressorAttack";
+	tmp_paramIDs[ControlID::highBandCompressorRelease] = "highBandCompressorRelease";
+	tmp_paramIDs[ControlID::highBandCompressorRatio] = "highBandCompressorRatio";
 
 	return tmp_paramIDs;
 }
@@ -122,6 +136,20 @@ std::array<juce::String, ControlID::countParams> PluginStateManager::createParam
 	tmp_paramNames[ControlID::lowBandCompressorRatio] = "Low Band Compressor Ratio";
 	// -- Low-Mid Crossover
 	tmp_paramNames[ControlID::lowMidCrossoverFreq] = "Low-Mid Crossover Freq";
+	// -- Mid Band Compressor
+	tmp_paramNames[ControlID::midBandCompressorBypass] = "Mid Band Compressor Bypass";
+	tmp_paramNames[ControlID::midBandCompressorThreshold] = "Mid Band Compressor Threshold";
+	tmp_paramNames[ControlID::midBandCompressorAttack] = "Mid Band Compressor Attack";
+	tmp_paramNames[ControlID::midBandCompressorRelease] = "Mid Band Compressor Release";
+	tmp_paramNames[ControlID::midBandCompressorRatio] = "Mid Band Compressor Ratio";
+	// -- Mid-High Crossover
+	tmp_paramNames[ControlID::midHighCrossoverFreq] = "Mid-High Crossover Freq";
+	// -- High Band Compressor
+	tmp_paramNames[ControlID::highBandCompressorBypass] = "High Band Compressor Bypass";
+	tmp_paramNames[ControlID::highBandCompressorThreshold] = "High Band Compressor Threshold";
+	tmp_paramNames[ControlID::highBandCompressorAttack] = "High Band Compressor Attack";
+	tmp_paramNames[ControlID::highBandCompressorRelease] = "High Band Compressor Release";
+	tmp_paramNames[ControlID::highBandCompressorRatio] = "High Band Compressor Ratio";
 
 	return tmp_paramNames;
 }
@@ -436,12 +464,133 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 		paramIDs[ControlID::lowMidCrossoverFreq],
 		1,
 		paramNames[ControlID::lowMidCrossoverFreq],
-		freqRange,
-		500.f,
+		juce::NormalisableRange<float>(20.f, 999.f, 1.f, 0.198893842f),
+		400.f,
 		"Hz",
 		SmoothingType::Linear
 	);
 
+	// -- Mid Band Compressor
+	tmp_parameterDefinitions[ControlID::midBandCompressorBypass] = ParameterDefinition(
+		ControlID::midBandCompressorBypass,
+		paramIDs[ControlID::midBandCompressorBypass],
+		1,
+		paramNames[ControlID::midBandCompressorBypass],
+		false,
+		"",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::midBandCompressorThreshold] = ParameterDefinition(
+		ControlID::midBandCompressorThreshold,
+		paramIDs[ControlID::midBandCompressorThreshold],
+		1,
+		paramNames[ControlID::midBandCompressorThreshold],
+		thresholdRange,
+		0.f,
+		"dB",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::midBandCompressorAttack] = ParameterDefinition(
+		ControlID::midBandCompressorAttack,
+		paramIDs[ControlID::midBandCompressorAttack],
+		1,
+		paramNames[ControlID::midBandCompressorAttack],
+		attackReleaseRange,
+		50.f,
+		"ms",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::midBandCompressorRelease] = ParameterDefinition(
+		ControlID::midBandCompressorRelease,
+		paramIDs[ControlID::midBandCompressorRelease],
+		1,
+		paramNames[ControlID::midBandCompressorRelease],
+		attackReleaseRange,
+		250.f,
+		"ms",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::midBandCompressorRatio] = ParameterDefinition(
+		ControlID::midBandCompressorRatio,
+		paramIDs[ControlID::midBandCompressorRatio],
+		1,
+		paramNames[ControlID::midBandCompressorRatio],
+		ratioRange,
+		1.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	// -- Mid-High Crossover
+	tmp_parameterDefinitions[ControlID::midHighCrossoverFreq] = ParameterDefinition(
+		ControlID::midHighCrossoverFreq,
+		paramIDs[ControlID::midHighCrossoverFreq],
+		1,
+		paramNames[ControlID::midHighCrossoverFreq],
+		juce::NormalisableRange<float>(1000.f, 20000.f, 1.f, 0.198893842f),
+		2000.f,
+		"Hz",
+		SmoothingType::Linear
+	);
+
+	// -- High Band Compressor
+	tmp_parameterDefinitions[ControlID::highBandCompressorBypass] = ParameterDefinition(
+		ControlID::highBandCompressorBypass,
+		paramIDs[ControlID::highBandCompressorBypass],
+		1,
+		paramNames[ControlID::highBandCompressorBypass],
+		false,
+		"",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::highBandCompressorThreshold] = ParameterDefinition(
+		ControlID::highBandCompressorThreshold,
+		paramIDs[ControlID::highBandCompressorThreshold],
+		1,
+		paramNames[ControlID::highBandCompressorThreshold],
+		thresholdRange,
+		0.f,
+		"dB",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::highBandCompressorAttack] = ParameterDefinition(
+		ControlID::highBandCompressorAttack,
+		paramIDs[ControlID::highBandCompressorAttack],
+		1,
+		paramNames[ControlID::highBandCompressorAttack],
+		attackReleaseRange,
+		50.f,
+		"ms",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::highBandCompressorRelease] = ParameterDefinition(
+		ControlID::highBandCompressorRelease,
+		paramIDs[ControlID::highBandCompressorRelease],
+		1,
+		paramNames[ControlID::highBandCompressorRelease],
+		attackReleaseRange,
+		250.f,
+		"ms",
+		SmoothingType::Linear
+	);
+
+	tmp_parameterDefinitions[ControlID::highBandCompressorRatio] = ParameterDefinition(
+		ControlID::highBandCompressorRatio,
+		paramIDs[ControlID::highBandCompressorRatio],
+		1,
+		paramNames[ControlID::highBandCompressorRatio],
+		ratioRange,
+		1.f,
+		"",
+		SmoothingType::Linear
+	);
 
 	return tmp_parameterDefinitions;
 }
