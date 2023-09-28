@@ -26,8 +26,8 @@ CompressorBand::~CompressorBand()
 
 //==============================================================================
 void CompressorBand::setupCompressorBand(
-	std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
-	std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+	std::array<ParameterDefinition, ControlID::countParams> &parameterDefinitions,
+	std::array<ParameterObject, ControlID::countParams> &pluginProcessorParameters,
 	// -- Compressor
 	ControlID bypassID,
 	ControlID thresholdID,
@@ -38,8 +38,7 @@ void CompressorBand::setupCompressorBand(
 	ControlID firstFilterCrossoverFreqID,
 	ControlID secondFilterCrossoverFreqID,
 	juce::dsp::LinkwitzRileyFilterType firstFilterType,
-	juce::dsp::LinkwitzRileyFilterType secondFilterType
-)
+	juce::dsp::LinkwitzRileyFilterType secondFilterType)
 {
 	this->parameterDefinitions = &parameterDefinitions;
 	this->pluginProcessorParameters = &pluginProcessorParameters;
@@ -49,7 +48,7 @@ void CompressorBand::setupCompressorBand(
 	this->attackID = attackID;
 	this->releaseID = releaseID;
 	this->ratioID = ratioID;
-	this->controlIDs = { bypassID, thresholdID, attackID, releaseID, ratioID };
+	this->controlIDs = {bypassID, thresholdID, attackID, releaseID, ratioID};
 	// -- Filters
 	this->firstFilterCrossoverFreqID = firstFilterCrossoverFreqID;
 	this->secondFilterCrossoverFreqID = secondFilterCrossoverFreqID;
@@ -58,7 +57,7 @@ void CompressorBand::setupCompressorBand(
 }
 
 //==============================================================================
-void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
+void CompressorBand::prepare(const juce::dsp::ProcessSpec &spec)
 {
 	auto sampleRate = spec.sampleRate;
 
@@ -76,7 +75,7 @@ void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
 		filters[FilterIDs::secondFilter].setCutoffFrequency(secondFilterCrossoverFreq);
 	}
 
-	for (auto& filter : filters)
+	for (auto &filter : filters)
 	{
 		filter.prepare(spec);
 	}
@@ -99,14 +98,14 @@ void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
 	(*pluginProcessorParameters)[ratioID].initSmoothing(sampleRate);
 }
 
-void CompressorBand::process(const juce::dsp::ProcessContextReplacing<float>& context)
+void CompressorBand::process(const juce::dsp::ProcessContextReplacing<float> &context)
 {
 	preProcess();
 
 	if (!juce::approximatelyEqual(bypass, 1.f))
 	{
 		// -- Filters
-		for (auto& filter : filters)
+		for (auto &filter : filters)
 		{
 			filter.process(context);
 		}
@@ -124,7 +123,7 @@ void CompressorBand::reset()
 //==============================================================================
 float CompressorBand::getLatency()
 {
-	return 0.f;
+	return 0.f; // TODO: check if filters or compressor add latency
 }
 
 //==============================================================================
@@ -135,11 +134,6 @@ void CompressorBand::preProcess()
 
 void CompressorBand::syncInBoundVariables()
 {
-	for (auto& id : controlIDs)
-	{
-		(*pluginProcessorParameters)[id].updateInBoundVariable();
-	}
-
 	postUpdatePluginParameters();
 }
 
@@ -169,12 +163,12 @@ void CompressorBand::postUpdatePluginParameters()
 
 	// -- Compressor
 	// -- Bypass
-	float newBypass = (*pluginProcessorParameters)[bypassID].getNextValue();
+	float newBypass = (*pluginProcessorParameters)[bypassID].getCurrentValue();
 	bool bypassChanged = !juce::approximatelyEqual(newBypass, bypass);
 	bypass = newBypass;
 
 	// -- Threshold
-	float newThreshold = (*pluginProcessorParameters)[thresholdID].getNextValue();
+	float newThreshold = (*pluginProcessorParameters)[thresholdID].getCurrentValue();
 	if (!juce::approximatelyEqual(newThreshold, threshold))
 	{
 		threshold = newThreshold;
@@ -182,7 +176,7 @@ void CompressorBand::postUpdatePluginParameters()
 	}
 
 	// -- Attack
-	float newAttack = (*pluginProcessorParameters)[attackID].getNextValue();
+	float newAttack = (*pluginProcessorParameters)[attackID].getCurrentValue();
 	if (!juce::approximatelyEqual(newAttack, attack))
 	{
 		attack = newAttack;
@@ -190,7 +184,7 @@ void CompressorBand::postUpdatePluginParameters()
 	}
 
 	// -- Release
-	float newRelease = (*pluginProcessorParameters)[releaseID].getNextValue();
+	float newRelease = (*pluginProcessorParameters)[releaseID].getCurrentValue();
 	if (!juce::approximatelyEqual(newRelease, release))
 	{
 		release = newRelease;
@@ -198,7 +192,7 @@ void CompressorBand::postUpdatePluginParameters()
 	}
 
 	// -- Ratio -- when bypassing we smooth the ratio to 1.f
-	float newRatio = (*pluginProcessorParameters)[ratioID].getNextValue();
+	float newRatio = (*pluginProcessorParameters)[ratioID].getCurrentValue();
 	bool ratioChanged = !juce::approximatelyEqual(newRatio, ratio);
 	if (ratioChanged || bypassChanged)
 	{

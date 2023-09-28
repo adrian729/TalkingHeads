@@ -81,6 +81,10 @@ private:
 		ControlID::preGain
 	};
 
+	ControlID bypassID{ ControlID::bypass };
+	ControlID blendID{ ControlID::blend };
+	ControlID preGainID{ ControlID::preGain };
+
 	// --- Parameters state APVTS
 	const juce::String PARAMETERS_APVTS_ID = "ParametersAPVTS";
 	juce::AudioProcessorValueTreeState parametersAPVTS;
@@ -115,7 +119,7 @@ private:
 	void postProcessBlock();
 
 	void syncInBoundVariables();
-	bool postUpdatePluginParameter(ControlID parameterID);
+	void postUpdatePluginParameters();
 
 	float getLatency();
 

@@ -15,10 +15,8 @@
 //==============================================================================
 MultiBandEQ::MultiBandEQ(
 	std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
-	std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)
-) :
-	parameterDefinitions(&parameterDefinitions),
-	pluginProcessorParameters(&pluginProcessorParameters)
+	std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)) : parameterDefinitions(&parameterDefinitions),
+																					   pluginProcessorParameters(&pluginProcessorParameters)
 {
 }
 
@@ -29,7 +27,7 @@ MultiBandEQ::~MultiBandEQ()
 }
 
 //==============================================================================
-void MultiBandEQ::prepare(const juce::dsp::ProcessSpec& spec)
+void MultiBandEQ::prepare(const juce::dsp::ProcessSpec &spec)
 {
 	sampleRate = spec.sampleRate;
 
@@ -37,14 +35,14 @@ void MultiBandEQ::prepare(const juce::dsp::ProcessSpec& spec)
 	highpassFreq = (*pluginProcessorParameters)[ControlID::highpassFreq].getFloatValue();
 	highpassSlope = intToEnum((*pluginProcessorParameters)[ControlID::highpassSlope].getChoiceIndex(), Slope);
 
-	auto& highpass = processorChain.get<highpassIndex>();
+	auto &highpass = processorChain.get<highpassIndex>();
 	updatePassFilter(highpass, makeHighpass(sampleRate), highpassSlope);
 
 	// -- Lowpass
 	lowpassFreq = (*pluginProcessorParameters)[ControlID::lowpassFreq].getFloatValue();
 	lowpassSlope = intToEnum((*pluginProcessorParameters)[ControlID::lowpassSlope].getChoiceIndex(), Slope);
 
-	auto& lowpass = processorChain.get<lowpassIndex>();
+	auto &lowpass = processorChain.get<lowpassIndex>();
 	updatePassFilter(lowpass, makeLowpass(sampleRate), lowpassSlope);
 
 	// -- Band Filter 1
@@ -52,57 +50,36 @@ void MultiBandEQ::prepare(const juce::dsp::ProcessSpec& spec)
 	bandFilter1PeakGain = (*pluginProcessorParameters)[ControlID::bandFilter1PeakGain].getFloatValue();
 	bandFilter1PeakQ = (*pluginProcessorParameters)[ControlID::bandFilter1PeakQ].getFloatValue();
 
-	auto& bandFilter1 = processorChain.get<bandFilter1Index>();
+	auto &bandFilter1 = processorChain.get<bandFilter1Index>();
 	updateCoefficients(
 		bandFilter1.coefficients,
-		makePeakFilter(bandFilter1PeakFreq, bandFilter1PeakGain, bandFilter1PeakQ, sampleRate)
-	);
+		makePeakFilter(bandFilter1PeakFreq, bandFilter1PeakGain, bandFilter1PeakQ, sampleRate));
 
 	// -- Band Filter 2
 	bandFilter2PeakFreq = (*pluginProcessorParameters)[ControlID::bandFilter2PeakFreq].getFloatValue();
 	bandFilter2PeakGain = (*pluginProcessorParameters)[ControlID::bandFilter2PeakGain].getFloatValue();
 	bandFilter2PeakQ = (*pluginProcessorParameters)[ControlID::bandFilter2PeakQ].getFloatValue();
 
-	auto& bandFilter2 = processorChain.get<bandFilter2Index>();
+	auto &bandFilter2 = processorChain.get<bandFilter2Index>();
 	updateCoefficients(
 		bandFilter2.coefficients,
-		makePeakFilter(bandFilter2PeakFreq, bandFilter2PeakGain, bandFilter2PeakQ, sampleRate)
-	);
+		makePeakFilter(bandFilter2PeakFreq, bandFilter2PeakGain, bandFilter2PeakQ, sampleRate));
 
 	// -- Band Filter 3
 	bandFilter3PeakFreq = (*pluginProcessorParameters)[ControlID::bandFilter3PeakFreq].getFloatValue();
 	bandFilter3PeakGain = (*pluginProcessorParameters)[ControlID::bandFilter3PeakGain].getFloatValue();
 	bandFilter3PeakQ = (*pluginProcessorParameters)[ControlID::bandFilter3PeakQ].getFloatValue();
 
-	auto& bandFilter3 = processorChain.get<bandFilter3Index>();
+	auto &bandFilter3 = processorChain.get<bandFilter3Index>();
 	updateCoefficients(
 		bandFilter3.coefficients,
-		makePeakFilter(bandFilter3PeakFreq, bandFilter3PeakGain, bandFilter3PeakQ, sampleRate)
-	);
+		makePeakFilter(bandFilter3PeakFreq, bandFilter3PeakGain, bandFilter3PeakQ, sampleRate));
 
 	// -- Chain
 	processorChain.prepare(spec);
-
-	// -- Setup smoothing
-	// -- HPF/LPF
-	(*pluginProcessorParameters)[ControlID::highpassFreq].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::lowpassFreq].initSmoothing(sampleRate);
-	// -- Band 1
-	(*pluginProcessorParameters)[ControlID::bandFilter1PeakFreq].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::bandFilter1PeakGain].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::bandFilter1PeakQ].initSmoothing(sampleRate);
-	// -- Band 2
-	(*pluginProcessorParameters)[ControlID::bandFilter2PeakFreq].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::bandFilter2PeakGain].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::bandFilter2PeakQ].initSmoothing(sampleRate);
-	// -- Band 3
-	(*pluginProcessorParameters)[ControlID::bandFilter3PeakFreq].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::bandFilter3PeakGain].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ControlID::bandFilter3PeakQ].initSmoothing(sampleRate);
-
 }
 
-void MultiBandEQ::process(const juce::dsp::ProcessContextReplacing<float>& context)
+void MultiBandEQ::process(const juce::dsp::ProcessContextReplacing<float> &context)
 {
 	preProcess();
 
@@ -128,9 +105,8 @@ void MultiBandEQ::postProcess()
 
 void MultiBandEQ::syncInBoundVariables()
 {
-	for (auto& id : firstStageControlIDs)
+	for (auto &id : firstStageControlIDs)
 	{
-		(*pluginProcessorParameters)[id].updateInBoundVariable();
 		postUpdatePluginParameter(id);
 	}
 
@@ -139,7 +115,7 @@ void MultiBandEQ::syncInBoundVariables()
 	processorChain.template setBypassed<highpassIndex>(highpassBypass);
 	if (!highpassBypass)
 	{
-		auto& highpass = processorChain.get<highpassIndex>();
+		auto &highpass = processorChain.get<highpassIndex>();
 		updatePassFilter(highpass, makeHighpass(sampleRate), highpassSlope);
 	}
 	// -- LPF
@@ -147,7 +123,7 @@ void MultiBandEQ::syncInBoundVariables()
 	processorChain.template setBypassed<lowpassIndex>(lowpassBypass);
 	if (!lowpassBypass)
 	{
-		auto& lowpass = processorChain.get<lowpassIndex>();
+		auto &lowpass = processorChain.get<lowpassIndex>();
 		updatePassFilter(lowpass, makeLowpass(sampleRate), lowpassSlope);
 	}
 
@@ -156,11 +132,10 @@ void MultiBandEQ::syncInBoundVariables()
 	processorChain.template setBypassed<bandFilter1Index>(bandFilter1Bypass);
 	if (!bandFilter1Bypass)
 	{
-		auto& bandFilter1 = processorChain.get<bandFilter1Index>();
+		auto &bandFilter1 = processorChain.get<bandFilter1Index>();
 		updateCoefficients(
 			bandFilter1.coefficients,
-			makePeakFilter(bandFilter1PeakFreq, bandFilter1PeakGain, bandFilter1PeakQ, sampleRate)
-		);
+			makePeakFilter(bandFilter1PeakFreq, bandFilter1PeakGain, bandFilter1PeakQ, sampleRate));
 	}
 
 	// -- Band Filter 2
@@ -168,11 +143,10 @@ void MultiBandEQ::syncInBoundVariables()
 	processorChain.template setBypassed<bandFilter2Index>(bandFilter2Bypass);
 	if (!bandFilter2Bypass)
 	{
-		auto& bandFilter2 = processorChain.get<bandFilter2Index>();
+		auto &bandFilter2 = processorChain.get<bandFilter2Index>();
 		updateCoefficients(
 			bandFilter2.coefficients,
-			makePeakFilter(bandFilter2PeakFreq, bandFilter2PeakGain, bandFilter2PeakQ, sampleRate)
-		);
+			makePeakFilter(bandFilter2PeakFreq, bandFilter2PeakGain, bandFilter2PeakQ, sampleRate));
 	}
 
 	// -- Band Filter 3
@@ -180,11 +154,10 @@ void MultiBandEQ::syncInBoundVariables()
 	processorChain.template setBypassed<bandFilter3Index>(bandFilter3Bypass);
 	if (!bandFilter3Bypass)
 	{
-		auto& bandFilter3 = processorChain.get<bandFilter3Index>();
+		auto &bandFilter3 = processorChain.get<bandFilter3Index>();
 		updateCoefficients(
 			bandFilter3.coefficients,
-			makePeakFilter(bandFilter3PeakFreq, bandFilter3PeakGain, bandFilter3PeakQ, sampleRate)
-		);
+			makePeakFilter(bandFilter3PeakFreq, bandFilter3PeakGain, bandFilter3PeakQ, sampleRate));
 	}
 }
 
@@ -196,7 +169,7 @@ bool MultiBandEQ::postUpdatePluginParameter(ControlID controlID)
 		// -- HPF
 	case ControlID::highpassFreq:
 	{
-		highpassFreq = (*pluginProcessorParameters)[controlID].getNextValue();
+		highpassFreq = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::highpassSlope:
@@ -209,7 +182,7 @@ bool MultiBandEQ::postUpdatePluginParameter(ControlID controlID)
 	// -- LPF
 	case ControlID::lowpassFreq:
 	{
-		lowpassFreq = (*pluginProcessorParameters)[controlID].getNextValue();
+		lowpassFreq = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::lowpassSlope:
@@ -222,49 +195,49 @@ bool MultiBandEQ::postUpdatePluginParameter(ControlID controlID)
 	// -- Band Filter 1
 	case ControlID::bandFilter1PeakFreq:
 	{
-		bandFilter1PeakFreq = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter1PeakFreq = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::bandFilter1PeakGain:
 	{
-		bandFilter1PeakGain = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter1PeakGain = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::bandFilter1PeakQ:
 	{
-		bandFilter1PeakQ = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter1PeakQ = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	// -- Band Filter 2
 	case ControlID::bandFilter2PeakFreq:
 	{
-		bandFilter2PeakFreq = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter2PeakFreq = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::bandFilter2PeakGain:
 	{
-		bandFilter2PeakGain = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter2PeakGain = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::bandFilter2PeakQ:
 	{
-		bandFilter2PeakQ = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter2PeakQ = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	// -- Band Filter 3
 	case ControlID::bandFilter3PeakFreq:
 	{
-		bandFilter3PeakFreq = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter3PeakFreq = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::bandFilter3PeakGain:
 	{
-		bandFilter3PeakGain = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter3PeakGain = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 	case ControlID::bandFilter3PeakQ:
 	{
-		bandFilter3PeakQ = (*pluginProcessorParameters)[controlID].getNextValue();
+		bandFilter3PeakQ = (*pluginProcessorParameters)[controlID].getCurrentValue();
 		break;
 	}
 
@@ -314,20 +287,20 @@ CoefficientsPtr MultiBandEQ::makePeakFilter(float peakFreq, float peakGain, floa
 	return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, peakFreq, peakQuality, juce::Decibels::decibelsToGain(peakGain));
 }
 
-void MultiBandEQ::updateCoefficients(CoefficientsPtr& old, const CoefficientsPtr& replacements)
+void MultiBandEQ::updateCoefficients(CoefficientsPtr &old, const CoefficientsPtr &replacements)
 {
 	*old = *replacements;
 }
 
 template <int Index, typename CoefficientType>
-void MultiBandEQ::update(PassFilter& filter, const CoefficientType& coefficients)
+void MultiBandEQ::update(PassFilter &filter, const CoefficientType &coefficients)
 {
 	updateCoefficients(filter.template get<Index>().coefficients, coefficients[Index]);
 	filter.template setBypassed<Index>(false);
 }
 
 template <typename CoefficientType>
-void MultiBandEQ::updatePassFilter(PassFilter& filter, CoefficientType& coefficients, const Slope& slope)
+void MultiBandEQ::updatePassFilter(PassFilter &filter, CoefficientType &coefficients, const Slope &slope)
 {
 	filter.template setBypassed<Slope::Slope_12>(true);
 	filter.template setBypassed<Slope::Slope_24>(true);

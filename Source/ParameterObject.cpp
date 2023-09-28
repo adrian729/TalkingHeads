@@ -112,6 +112,11 @@ int ParameterObject::getIntValue()
 // -- Smoothing
 void ParameterObject::initSmoothing(double sampleRate, double rampLengthInSeconds)
 {
+	if (smoothingType == SmoothingType::NoSmoothing)
+	{
+		return;
+	}
+
 	reset(sampleRate, rampLengthInSeconds);
 	setCurrentAndTargetValue(getFloatValue());
 }
@@ -238,8 +243,8 @@ void ParameterObject::updateInBoundVariable()
 		inBoundVariable = getParameterFloat()->get();
 	}
 
-	// -- Set the smoothed value target to the inBound variable.
 	setTargetValue(inBoundVariable);
+	getNextValue();
 }
 
 //==============================================================================

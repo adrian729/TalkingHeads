@@ -232,45 +232,25 @@ void TalkingHeadsPluginAudioProcessor::preProcessBlock()
 
 void TalkingHeadsPluginAudioProcessor::postProcessBlock()
 {
-
 }
 
 void TalkingHeadsPluginAudioProcessor::syncInBoundVariables() {
-	for (auto& id : generalControlIDs)
+	// -- In the main processor we update all variables
+	for (auto& param : pluginProcessorParameters)
 	{
-		pluginProcessorParameters[id].updateInBoundVariable();
-		postUpdatePluginParameter(id);
+		param.updateInBoundVariable();
 	}
 
-	// -- if bypassing, add bypass to dry/wet mixer
-	blendMixer.setWetMixProportion(std::max(0.f, blend - bypass)); // -- if bypassing, all dry. bypass should smooth from 0.f to 1.f when selected.
+	postUpdatePluginParameters();
 }
 
-bool TalkingHeadsPluginAudioProcessor::postUpdatePluginParameter(ControlID controlID)
+void TalkingHeadsPluginAudioProcessor::postUpdatePluginParameters()
 {
-	// Cooking and transfer raw parameters to member variables
-	switch (controlID)
-	{
-	case ControlID::bypass:
-	{
-		bypass = pluginProcessorParameters[controlID].getNextValue();
-		break;
-	}
-	case ControlID::blend:
-	{
-		blend = pluginProcessorParameters[controlID].getNextValue();
-		break;
-	}
-	case ControlID::preGain:
-	{
-		preGainProcessor.setGainDecibels(pluginProcessorParameters[controlID].getFloatValue());
-		break;
-	}
-	default:
-		return false;
-	}
+	bypass = pluginProcessorParameters[bypassID].getCurrentValue();
+	blend = pluginProcessorParameters[blendID].getCurrentValue();
+	preGainProcessor.setGainDecibels(pluginProcessorParameters[preGainID].getCurrentValue());
 
-	return true;
+	blendMixer.setWetMixProportion(std::max(0.f, blend - bypass)); // -- if bypassing, all dry. bypass should smooth from 0.f to 1.f when selected.
 }
 
 float TalkingHeadsPluginAudioProcessor::getLatency()
@@ -359,12 +339,6 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 	firstStageProcessor.prepare(monoSpec);
 
 	// -- initialize second stage processor
-	secondStageProcessor.setupMultiBandCompressor(
-		parameterDefinitions,
-		pluginProcessorParameters,
-		ControlID::lowMidCrossoverFreq,
-		ControlID::midHighCrossoverFreq
-	);
 	// -- Low band filter -- lowpass1 -> allpass = lowpass band (----\) -- we add an allpass to avoid phase issues
 	secondStageProcessor.getLowBandCompressor()->setupCompressorBand(
 		parameterDefinitions,
@@ -417,8 +391,10 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 	secondStageProcessor.prepare(monoSpec);
 
 	// -- Setup smoothing
-	pluginProcessorParameters[ControlID::bypass].initSmoothing(sampleRate, 0.01f);
-	pluginProcessorParameters[ControlID::blend].initSmoothing(sampleRate);
+	for (int i{ 0 }; i < ControlID::countParams; ++i)
+	{
+		pluginProcessorParameters[i].initSmoothing(sampleRate, parameterDefinitions[i].getRampLengthInSeconds());
+	}
 }
 
 //==============================================================================

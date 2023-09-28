@@ -21,6 +21,16 @@ PluginStateManager::~PluginStateManager()
 }
 
 //==============================================================================
+std::array<juce::String, ControlID::countParams>& PluginStateManager::getParameterIDs()
+{
+	return parameterIDs;
+}
+
+std::array<juce::String, ControlID::countParams>& PluginStateManager::getParameterNames()
+{
+	return parameterNames;
+}
+
 std::array<ParameterDefinition, ControlID::countParams>& PluginStateManager::getParameterDefinitions()
 {
 	return parameterDefinitions;
@@ -28,8 +38,8 @@ std::array<ParameterDefinition, ControlID::countParams>& PluginStateManager::get
 
 //==============================================================================
 
-std::array<juce::String, ControlID::countParams> PluginStateManager::paramIDs = createParamIDs();
-std::array<juce::String, ControlID::countParams> PluginStateManager::paramNames = createParamNames();
+std::array<juce::String, ControlID::countParams> PluginStateManager::parameterIDs = createParamIDs();
+std::array<juce::String, ControlID::countParams> PluginStateManager::parameterNames = createParamNames();
 std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::parameterDefinitions = createParameterDefinitions();
 
 std::array<juce::String, ControlID::countParams> PluginStateManager::createParamIDs()
@@ -168,19 +178,20 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- General -- Bypass ALL // Blend (dry/wet) // Pre Gain
 	tmp_parameterDefinitions[ControlID::bypass] = ParameterDefinition(
 		ControlID::bypass,
-		paramIDs[ControlID::bypass],
+		parameterIDs[ControlID::bypass],
 		1,
-		paramNames[ControlID::bypass],
+		parameterNames[ControlID::bypass],
 		false,
 		"",
-		SmoothingType::Linear
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::blend] = ParameterDefinition(
 		ControlID::blend,
-		paramIDs[ControlID::blend],
+		parameterIDs[ControlID::blend],
 		1,
-		paramNames[ControlID::blend],
+		parameterNames[ControlID::blend],
 		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
 		1.f,
 		"",
@@ -189,9 +200,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::preGain] = ParameterDefinition(
 		ControlID::preGain,
-		paramIDs[ControlID::preGain],
+		parameterIDs[ControlID::preGain],
 		1,
-		paramNames[ControlID::preGain],
+		parameterNames[ControlID::preGain],
 		gainRange,
 		0.f,
 		"dB",
@@ -212,9 +223,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- HPF
 	tmp_parameterDefinitions[ControlID::highpassBypass] = ParameterDefinition(
 		ControlID::highpassBypass,
-		paramIDs[ControlID::highpassBypass],
+		parameterIDs[ControlID::highpassBypass],
 		1,
-		paramNames[ControlID::highpassBypass],
+		parameterNames[ControlID::highpassBypass],
 		false,
 		"",
 		SmoothingType::NoSmoothing
@@ -222,29 +233,30 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::highpassFreq] = ParameterDefinition(
 		ControlID::highpassFreq,
-		paramIDs[ControlID::highpassFreq],
+		parameterIDs[ControlID::highpassFreq],
 		1,
-		paramNames[ControlID::highpassFreq],
+		parameterNames[ControlID::highpassFreq],
 		freqRange,
 		20.f,
 		"Hz",
-		SmoothingType::Linear
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::highpassSlope] = ParameterDefinition(
 		ControlID::highpassSlope,
-		paramIDs[ControlID::highpassSlope],
+		parameterIDs[ControlID::highpassSlope],
 		1,
-		paramNames[ControlID::highpassSlope],
+		parameterNames[ControlID::highpassSlope],
 		freqPassSlopeChoices
 	);
 
 	// -- LPF
 	tmp_parameterDefinitions[ControlID::lowpassBypass] = ParameterDefinition(
 		ControlID::lowpassBypass,
-		paramIDs[ControlID::lowpassBypass],
+		parameterIDs[ControlID::lowpassBypass],
 		1,
-		paramNames[ControlID::lowpassBypass],
+		parameterNames[ControlID::lowpassBypass],
 		false,
 		"",
 		SmoothingType::NoSmoothing
@@ -252,9 +264,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::lowpassFreq] = ParameterDefinition(
 		ControlID::lowpassFreq,
-		paramIDs[ControlID::lowpassFreq],
+		parameterIDs[ControlID::lowpassFreq],
 		1,
-		paramNames[ControlID::lowpassFreq],
+		parameterNames[ControlID::lowpassFreq],
 		freqRange,
 		20000.f,
 		"Hz",
@@ -263,18 +275,18 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::lowpassSlope] = ParameterDefinition(
 		ControlID::lowpassSlope,
-		paramIDs[ControlID::lowpassSlope],
+		parameterIDs[ControlID::lowpassSlope],
 		1,
-		paramNames[ControlID::lowpassSlope],
+		parameterNames[ControlID::lowpassSlope],
 		freqPassSlopeChoices
 	);
 
 	// -- Band Filter 1
 	tmp_parameterDefinitions[ControlID::bandFilter1Bypass] = ParameterDefinition(
 		ControlID::bandFilter1Bypass,
-		paramIDs[ControlID::bandFilter1Bypass],
+		parameterIDs[ControlID::bandFilter1Bypass],
 		1,
-		paramNames[ControlID::bandFilter1Bypass],
+		parameterNames[ControlID::bandFilter1Bypass],
 		false,
 		"",
 		SmoothingType::NoSmoothing
@@ -282,9 +294,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter1PeakFreq] = ParameterDefinition(
 		ControlID::bandFilter1PeakFreq,
-		paramIDs[ControlID::bandFilter1PeakFreq],
+		parameterIDs[ControlID::bandFilter1PeakFreq],
 		1,
-		paramNames[ControlID::bandFilter1PeakFreq],
+		parameterNames[ControlID::bandFilter1PeakFreq],
 		freqRange,
 		750.f,
 		"Hz",
@@ -293,9 +305,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter1PeakGain] = ParameterDefinition(
 		ControlID::bandFilter1PeakGain,
-		paramIDs[ControlID::bandFilter1PeakGain],
+		parameterIDs[ControlID::bandFilter1PeakGain],
 		1,
-		paramNames[ControlID::bandFilter1PeakGain],
+		parameterNames[ControlID::bandFilter1PeakGain],
 		gainRange,
 		0.f,
 		"dB",
@@ -304,9 +316,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter1PeakQ] = ParameterDefinition(
 		ControlID::bandFilter1PeakQ,
-		paramIDs[ControlID::bandFilter1PeakQ],
+		parameterIDs[ControlID::bandFilter1PeakQ],
 		1,
-		paramNames[ControlID::bandFilter1PeakQ],
+		parameterNames[ControlID::bandFilter1PeakQ],
 		filterQRange,
 		1.f,
 		"",
@@ -316,9 +328,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- Band Filter 2
 	tmp_parameterDefinitions[ControlID::bandFilter2Bypass] = ParameterDefinition(
 		ControlID::bandFilter2Bypass,
-		paramIDs[ControlID::bandFilter2Bypass],
+		parameterIDs[ControlID::bandFilter2Bypass],
 		1,
-		paramNames[ControlID::bandFilter2Bypass],
+		parameterNames[ControlID::bandFilter2Bypass],
 		false,
 		"",
 		SmoothingType::NoSmoothing
@@ -326,9 +338,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter2PeakFreq] = ParameterDefinition(
 		ControlID::bandFilter2PeakFreq,
-		paramIDs[ControlID::bandFilter2PeakFreq],
+		parameterIDs[ControlID::bandFilter2PeakFreq],
 		1,
-		paramNames[ControlID::bandFilter2PeakFreq],
+		parameterNames[ControlID::bandFilter2PeakFreq],
 		freqRange,
 		2000.f,
 		"Hz",
@@ -337,9 +349,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter2PeakGain] = ParameterDefinition(
 		ControlID::bandFilter2PeakGain,
-		paramIDs[ControlID::bandFilter2PeakGain],
+		parameterIDs[ControlID::bandFilter2PeakGain],
 		1,
-		paramNames[ControlID::bandFilter2PeakGain],
+		parameterNames[ControlID::bandFilter2PeakGain],
 		gainRange,
 		0.f,
 		"dB",
@@ -348,9 +360,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter2PeakQ] = ParameterDefinition(
 		ControlID::bandFilter2PeakQ,
-		paramIDs[ControlID::bandFilter2PeakQ],
+		parameterIDs[ControlID::bandFilter2PeakQ],
 		1,
-		paramNames[ControlID::bandFilter2PeakQ],
+		parameterNames[ControlID::bandFilter2PeakQ],
 		filterQRange,
 		1.f,
 		"",
@@ -360,9 +372,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- Band Filter 3
 	tmp_parameterDefinitions[ControlID::bandFilter3Bypass] = ParameterDefinition(
 		ControlID::bandFilter3Bypass,
-		paramIDs[ControlID::bandFilter3Bypass],
+		parameterIDs[ControlID::bandFilter3Bypass],
 		1,
-		paramNames[ControlID::bandFilter3Bypass],
+		parameterNames[ControlID::bandFilter3Bypass],
 		false,
 		"",
 		SmoothingType::NoSmoothing
@@ -370,9 +382,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter3PeakFreq] = ParameterDefinition(
 		ControlID::bandFilter3PeakFreq,
-		paramIDs[ControlID::bandFilter3PeakFreq],
+		parameterIDs[ControlID::bandFilter3PeakFreq],
 		1,
-		paramNames[ControlID::bandFilter3PeakFreq],
+		parameterNames[ControlID::bandFilter3PeakFreq],
 		freqRange,
 		4000.f,
 		"Hz",
@@ -381,9 +393,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter3PeakGain] = ParameterDefinition(
 		ControlID::bandFilter3PeakGain,
-		paramIDs[ControlID::bandFilter3PeakGain],
+		parameterIDs[ControlID::bandFilter3PeakGain],
 		1,
-		paramNames[ControlID::bandFilter3PeakGain],
+		parameterNames[ControlID::bandFilter3PeakGain],
 		gainRange,
 		0.f,
 		"dB",
@@ -392,9 +404,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::bandFilter3PeakQ] = ParameterDefinition(
 		ControlID::bandFilter3PeakQ,
-		paramIDs[ControlID::bandFilter3PeakQ],
+		parameterIDs[ControlID::bandFilter3PeakQ],
 		1,
-		paramNames[ControlID::bandFilter3PeakQ],
+		parameterNames[ControlID::bandFilter3PeakQ],
 		filterQRange,
 		1.f,
 		"",
@@ -406,19 +418,20 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- Low Band Compressor
 	tmp_parameterDefinitions[ControlID::lowBandCompressorBypass] = ParameterDefinition(
 		ControlID::lowBandCompressorBypass,
-		paramIDs[ControlID::lowBandCompressorBypass],
+		parameterIDs[ControlID::lowBandCompressorBypass],
 		false,
-		paramNames[ControlID::lowBandCompressorBypass],
+		parameterNames[ControlID::lowBandCompressorBypass],
 		false,
 		"",
-		SmoothingType::Linear
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::lowBandCompressorThreshold] = ParameterDefinition(
 		ControlID::lowBandCompressorThreshold,
-		paramIDs[ControlID::lowBandCompressorThreshold],
+		parameterIDs[ControlID::lowBandCompressorThreshold],
 		1,
-		paramNames[ControlID::lowBandCompressorThreshold],
+		parameterNames[ControlID::lowBandCompressorThreshold],
 		thresholdRange,
 		0.f,
 		"dB",
@@ -427,9 +440,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::lowBandCompressorAttack] = ParameterDefinition(
 		ControlID::lowBandCompressorAttack,
-		paramIDs[ControlID::lowBandCompressorAttack],
+		parameterIDs[ControlID::lowBandCompressorAttack],
 		1,
-		paramNames[ControlID::lowBandCompressorAttack],
+		parameterNames[ControlID::lowBandCompressorAttack],
 		attackReleaseRange,
 		50.f,
 		"ms",
@@ -438,9 +451,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::lowBandCompressorRelease] = ParameterDefinition(
 		ControlID::lowBandCompressorRelease,
-		paramIDs[ControlID::lowBandCompressorRelease],
+		parameterIDs[ControlID::lowBandCompressorRelease],
 		1,
-		paramNames[ControlID::lowBandCompressorRelease],
+		parameterNames[ControlID::lowBandCompressorRelease],
 		attackReleaseRange,
 		250.f,
 		"ms",
@@ -449,9 +462,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::lowBandCompressorRatio] = ParameterDefinition(
 		ControlID::lowBandCompressorRatio,
-		paramIDs[ControlID::lowBandCompressorRatio],
+		parameterIDs[ControlID::lowBandCompressorRatio],
 		1,
-		paramNames[ControlID::lowBandCompressorRatio],
+		parameterNames[ControlID::lowBandCompressorRatio],
 		ratioRange,
 		1.f,
 		"",
@@ -461,9 +474,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- Low-Mid Crossover
 	tmp_parameterDefinitions[ControlID::lowMidCrossoverFreq] = ParameterDefinition(
 		ControlID::lowMidCrossoverFreq,
-		paramIDs[ControlID::lowMidCrossoverFreq],
+		parameterIDs[ControlID::lowMidCrossoverFreq],
 		1,
-		paramNames[ControlID::lowMidCrossoverFreq],
+		parameterNames[ControlID::lowMidCrossoverFreq],
 		juce::NormalisableRange<float>(20.f, 999.f, 1.f, 0.198893842f),
 		400.f,
 		"Hz",
@@ -473,19 +486,20 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- Mid Band Compressor
 	tmp_parameterDefinitions[ControlID::midBandCompressorBypass] = ParameterDefinition(
 		ControlID::midBandCompressorBypass,
-		paramIDs[ControlID::midBandCompressorBypass],
+		parameterIDs[ControlID::midBandCompressorBypass],
 		1,
-		paramNames[ControlID::midBandCompressorBypass],
+		parameterNames[ControlID::midBandCompressorBypass],
 		false,
 		"",
-		SmoothingType::Linear
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::midBandCompressorThreshold] = ParameterDefinition(
 		ControlID::midBandCompressorThreshold,
-		paramIDs[ControlID::midBandCompressorThreshold],
+		parameterIDs[ControlID::midBandCompressorThreshold],
 		1,
-		paramNames[ControlID::midBandCompressorThreshold],
+		parameterNames[ControlID::midBandCompressorThreshold],
 		thresholdRange,
 		0.f,
 		"dB",
@@ -494,9 +508,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::midBandCompressorAttack] = ParameterDefinition(
 		ControlID::midBandCompressorAttack,
-		paramIDs[ControlID::midBandCompressorAttack],
+		parameterIDs[ControlID::midBandCompressorAttack],
 		1,
-		paramNames[ControlID::midBandCompressorAttack],
+		parameterNames[ControlID::midBandCompressorAttack],
 		attackReleaseRange,
 		50.f,
 		"ms",
@@ -505,9 +519,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::midBandCompressorRelease] = ParameterDefinition(
 		ControlID::midBandCompressorRelease,
-		paramIDs[ControlID::midBandCompressorRelease],
+		parameterIDs[ControlID::midBandCompressorRelease],
 		1,
-		paramNames[ControlID::midBandCompressorRelease],
+		parameterNames[ControlID::midBandCompressorRelease],
 		attackReleaseRange,
 		250.f,
 		"ms",
@@ -516,9 +530,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::midBandCompressorRatio] = ParameterDefinition(
 		ControlID::midBandCompressorRatio,
-		paramIDs[ControlID::midBandCompressorRatio],
+		parameterIDs[ControlID::midBandCompressorRatio],
 		1,
-		paramNames[ControlID::midBandCompressorRatio],
+		parameterNames[ControlID::midBandCompressorRatio],
 		ratioRange,
 		1.f,
 		"",
@@ -528,9 +542,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- Mid-High Crossover
 	tmp_parameterDefinitions[ControlID::midHighCrossoverFreq] = ParameterDefinition(
 		ControlID::midHighCrossoverFreq,
-		paramIDs[ControlID::midHighCrossoverFreq],
+		parameterIDs[ControlID::midHighCrossoverFreq],
 		1,
-		paramNames[ControlID::midHighCrossoverFreq],
+		parameterNames[ControlID::midHighCrossoverFreq],
 		juce::NormalisableRange<float>(1000.f, 20000.f, 1.f, 0.198893842f),
 		2000.f,
 		"Hz",
@@ -540,19 +554,20 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	// -- High Band Compressor
 	tmp_parameterDefinitions[ControlID::highBandCompressorBypass] = ParameterDefinition(
 		ControlID::highBandCompressorBypass,
-		paramIDs[ControlID::highBandCompressorBypass],
+		parameterIDs[ControlID::highBandCompressorBypass],
 		1,
-		paramNames[ControlID::highBandCompressorBypass],
+		parameterNames[ControlID::highBandCompressorBypass],
 		false,
 		"",
-		SmoothingType::Linear
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::highBandCompressorThreshold] = ParameterDefinition(
 		ControlID::highBandCompressorThreshold,
-		paramIDs[ControlID::highBandCompressorThreshold],
+		parameterIDs[ControlID::highBandCompressorThreshold],
 		1,
-		paramNames[ControlID::highBandCompressorThreshold],
+		parameterNames[ControlID::highBandCompressorThreshold],
 		thresholdRange,
 		0.f,
 		"dB",
@@ -561,9 +576,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::highBandCompressorAttack] = ParameterDefinition(
 		ControlID::highBandCompressorAttack,
-		paramIDs[ControlID::highBandCompressorAttack],
+		parameterIDs[ControlID::highBandCompressorAttack],
 		1,
-		paramNames[ControlID::highBandCompressorAttack],
+		parameterNames[ControlID::highBandCompressorAttack],
 		attackReleaseRange,
 		50.f,
 		"ms",
@@ -572,9 +587,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::highBandCompressorRelease] = ParameterDefinition(
 		ControlID::highBandCompressorRelease,
-		paramIDs[ControlID::highBandCompressorRelease],
+		parameterIDs[ControlID::highBandCompressorRelease],
 		1,
-		paramNames[ControlID::highBandCompressorRelease],
+		parameterNames[ControlID::highBandCompressorRelease],
 		attackReleaseRange,
 		250.f,
 		"ms",
@@ -583,9 +598,9 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 
 	tmp_parameterDefinitions[ControlID::highBandCompressorRatio] = ParameterDefinition(
 		ControlID::highBandCompressorRatio,
-		paramIDs[ControlID::highBandCompressorRatio],
+		parameterIDs[ControlID::highBandCompressorRatio],
 		1,
-		paramNames[ControlID::highBandCompressorRatio],
+		parameterNames[ControlID::highBandCompressorRatio],
 		ratioRange,
 		1.f,
 		"",

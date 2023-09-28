@@ -26,13 +26,15 @@ public:
 	//==============================================================================
 	// -- METHODS
 	//==============================================================================
+	std::array<juce::String, ControlID::countParams>& getParameterIDs();
+	std::array<juce::String, ControlID::countParams>& getParameterNames();
 	std::array<ParameterDefinition, ControlID::countParams>& getParameterDefinitions();
 
 private:
 	//==============================================================================
 	// --- Parameters definitions - make sure each item in the array matches the order of the enum
-	static std::array<juce::String, ControlID::countParams> paramIDs;
-	static std::array<juce::String, ControlID::countParams> paramNames;
+	static std::array<juce::String, ControlID::countParams> parameterIDs;
+	static std::array<juce::String, ControlID::countParams> parameterNames;
 	static std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions;
 
 	static std::array<juce::String, ControlID::countParams> createParamIDs();

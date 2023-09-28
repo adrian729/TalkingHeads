@@ -27,14 +27,6 @@ public:
 	~MultiBandCompressor();
 
 	//==============================================================================
-	void setupMultiBandCompressor(
-		std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
-		std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
-		ControlID lowMidCrossoverFreqID,
-		ControlID midHighCrossoverFreqID
-	);
-
-	//==============================================================================
 	CompressorBand* getLowBandCompressor();
 	CompressorBand* getMidBandCompressor();
 	CompressorBand* getHighBandCompressor();
@@ -48,46 +40,8 @@ public:
 	float getLatency();
 
 private:
-	// TODO: abstract the class from the processor stage of the plugin so that it can be used separately
-	//==============================================================================
-	// --- Object parameters management and information
-	std::set<ControlID> controlIDs;
-
-	ControlID lowMidCrossoverFreqID{ ControlID::countParams };
-	ControlID midHighCrossoverFreqID{ ControlID::countParams };
-
-	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
-	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };
-
 	//==============================================================================
 	// --- Object member variables
-
-	// -- Band filters
-	float lowMidCrossoverFreq{ 0.f };
-	float midHighCrossoverFreq{ 0.f };
-
-	//==============================================================================
-	// -- Band filters
-	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
-
-	// -- Low band filter -- lowpass1 -> allpass = lowpass band (----\) -- we add an allpass to avoid phase issues, since each filter adds a small delay and we need 2 filters for the mid crossover
-	// -- mid band filter -- highpass1 -> lowpass2 = mid band (/---\)
-	// -- high band filter -- highpass1 -> highpass2 = highpass band (/----)
-	enum FilterIDs
-	{
-		lowpass1,
-		allpass,
-
-		highpass1,
-		lowpass2,
-
-		highpass2,
-		// -- Count
-		countFilters
-	};
-	std::array<Filter, FilterIDs::countFilters> bandFilters;
-
-	// -- 0: low band, 1: mid band, 2: high band
 	enum BandIDs
 	{
 		lowBand,
@@ -98,11 +52,6 @@ private:
 	};
 	std::array<juce::AudioBuffer<float>, BandIDs::countBands> filterBuffers;
 	std::array<juce::dsp::AudioBlock<float>, BandIDs::countBands> filterBlocks;
-	std::array<CompressorBand, 3> compressorBands;
+	std::array<CompressorBand, BandIDs::countBands> compressorBands;
 
-	//==============================================================================
-	void preProcess();
-
-	void syncInBoundVariables();
-	void postUpdatePluginParameters();
 };

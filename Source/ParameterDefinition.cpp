@@ -21,7 +21,8 @@ ParameterDefinition::ParameterDefinition() :
 	floatRange(juce::NormalisableRange<float>()),
 	defaultValue(0.f),
 	suffixLabel(""),
-	smoothingType(SmoothingType::NoSmoothing)
+	smoothingType(SmoothingType::NoSmoothing),
+	rampLengthInSeconds(0.005f)
 {
 }
 // -- BOOL
@@ -32,7 +33,8 @@ ParameterDefinition::ParameterDefinition(
 	const juce::String& name,
 	bool defaultValue,
 	const juce::String& suffixLabel,
-	SmoothingType smoothingType
+	SmoothingType smoothingType,
+	double rampLengthInSeconds
 ) :
 	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
@@ -40,7 +42,8 @@ ParameterDefinition::ParameterDefinition(
 	parameterType(ParameterType::Bool),
 	defaultValue(static_cast<float>(defaultValue)),
 	suffixLabel(suffixLabel),
-	smoothingType(smoothingType)
+	smoothingType(smoothingType),
+	rampLengthInSeconds(rampLengthInSeconds)
 {
 }
 // -- CHOICE CONSTRUCTOR
@@ -52,7 +55,8 @@ ParameterDefinition::ParameterDefinition(
 	const juce::StringArray& choices,
 	int defaultItemIndex,
 	const juce::String& suffixLabel,
-	SmoothingType smoothingType
+	SmoothingType smoothingType,
+	double rampLengthInSeconds
 ) :
 	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
@@ -61,7 +65,8 @@ ParameterDefinition::ParameterDefinition(
 	choices(choices),
 	defaultValue(static_cast<float>(defaultItemIndex)),
 	suffixLabel(suffixLabel),
-	smoothingType(smoothingType)
+	smoothingType(smoothingType),
+	rampLengthInSeconds(rampLengthInSeconds)
 {
 }
 // -- FLOAT CONSTRUCTOR
@@ -73,7 +78,8 @@ ParameterDefinition::ParameterDefinition(
 	const juce::NormalisableRange<float>& floatRange,
 	float defaultValue,
 	const juce::String& suffixLabel,
-	SmoothingType smoothingType
+	SmoothingType smoothingType,
+	double rampLengthInSeconds
 ) :
 	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
@@ -82,7 +88,8 @@ ParameterDefinition::ParameterDefinition(
 	floatRange(floatRange),
 	defaultValue(defaultValue),
 	suffixLabel(suffixLabel),
-	smoothingType(smoothingType)
+	smoothingType(smoothingType),
+	rampLengthInSeconds(rampLengthInSeconds)
 {
 }
 // -- INT CONSTRUCTOR
@@ -95,7 +102,8 @@ ParameterDefinition::ParameterDefinition(
 	int maxValue,
 	int defaultValue,
 	const juce::String& suffixLabel,
-	SmoothingType smoothingType
+	SmoothingType smoothingType,
+	double rampLengthInSeconds
 ) :
 	controlID(controlID),
 	parameterID(juce::ParameterID{ id, versionHint }),
@@ -105,7 +113,8 @@ ParameterDefinition::ParameterDefinition(
 	maxValue(maxValue),
 	defaultValue(static_cast<float>(defaultValue)),
 	suffixLabel(suffixLabel),
-	smoothingType(smoothingType)
+	smoothingType(smoothingType),
+	rampLengthInSeconds(rampLengthInSeconds)
 {
 }
 
@@ -175,6 +184,11 @@ juce::NormalisableRange<float> ParameterDefinition::getFloatRange() const
 SmoothingType ParameterDefinition::getSmoothingType() const
 {
 	return smoothingType;
+}
+
+double ParameterDefinition::getRampLengthInSeconds() const
+{
+	return rampLengthInSeconds;
 }
 
 int ParameterDefinition::getIntDefaultValue() const

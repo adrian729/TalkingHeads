@@ -29,7 +29,8 @@ public:
 		const juce::String& name,
 		bool defaultValue = false,
 		const juce::String& suffixLabel = "",
-		SmoothingType smoothingType = SmoothingType::NoSmoothing
+		SmoothingType smoothingType = SmoothingType::NoSmoothing,
+		double rampLengthInSeconds = 0.005f
 	);
 	// -- CHOICE CONSTRUCTOR
 	ParameterDefinition(
@@ -40,7 +41,8 @@ public:
 		const juce::StringArray& choices,
 		int defaultItemIndex = 0,
 		const juce::String& suffixLabel = "",
-		SmoothingType smoothingType = SmoothingType::NoSmoothing
+		SmoothingType smoothingType = SmoothingType::NoSmoothing,
+		double rampLengthInSeconds = 0.005f
 	);
 	// -- FLOAT CONSTRUCTOR
 	ParameterDefinition(
@@ -51,7 +53,8 @@ public:
 		const juce::NormalisableRange<float>& floatRange,
 		float defaultValue = 0.f,
 		const juce::String& suffixLabel = "",
-		SmoothingType smoothingType = SmoothingType::NoSmoothing
+		SmoothingType smoothingType = SmoothingType::NoSmoothing,
+		double rampLengthInSeconds = 0.005f
 	);
 	// -- INT CONSTRUCTOR
 	ParameterDefinition(
@@ -63,7 +66,8 @@ public:
 		int maxValue,
 		int defaultValue = 0,
 		const juce::String& suffixLabel = "",
-		SmoothingType smoothingType = SmoothingType::NoSmoothing
+		SmoothingType smoothingType = SmoothingType::NoSmoothing,
+		double rampLengthInSeconds = 0.005f
 	);
 
 	~ParameterDefinition();
@@ -95,6 +99,8 @@ public:
 
 	SmoothingType getSmoothingType() const;
 
+	double getRampLengthInSeconds() const;
+
 	int getIntDefaultValue() const;
 
 	int getIntMinValue() const;
@@ -123,6 +129,7 @@ private:
 	// -- FLOAT parameters
 	juce::NormalisableRange<float> floatRange{ juce::NormalisableRange<float>() };
 	SmoothingType smoothingType{ SmoothingType::NoSmoothing };
+	float rampLengthInSeconds{ 0.005f };
 	// -- INT parameters
 	int minValue{ 0 };
 	int maxValue{ 0 };
