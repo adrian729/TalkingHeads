@@ -72,7 +72,7 @@ private:
 	// -- InBound value
 	std::atomic<float> inBoundVariable;
 	//==============================================================================
-	// -- Smoothing 
+	// -- Smoothing
 	SmoothingType smoothingType;
 	// -- Linear
 	juce::LinearSmoothedValue<float> linearSmoothedValue;

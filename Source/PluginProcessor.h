@@ -97,16 +97,12 @@ private:
 
 	juce::dsp::Gain<float> preGainProcessor;
 	juce::dsp::DryWetMixer<float> blendMixer;
-	juce::AudioBuffer<float> blendMixerBuffer; // -- used to mix mono dry input with the stereo wet output
+	juce::AudioBuffer<float> blendMixerBuffer; // -- buffer to replicate mono signal to all channels for the blend mixer
 
-	// -- stage 1 -- Gain // HPF, LPF, 3 Band EQ // 3 Band Compressor
+	// -- stage 1 -- HPF, LPF, 3 Band EQ
 	MultiBandEQ firstStageProcessor{ parameterDefinitions, pluginProcessorParameters };
-	MultiBandCompressor secondStageProcessor{ parameterDefinitions, pluginProcessorParameters };
-
-	//// -- TMP pitch shifter -- FOR NOW ONLY POSSIBLE DOWN, FOR UP WE NEED TO ADD LATENCY/DELAY
-	//float samplesPitchShiftFactor = 1.f; // 0.f = no shift, 1.0f = 1 octave down, 2.0f = 2 octaves down, etc.
-	//int lastBlockSize = 0;
-	//std::unique_ptr<float[]> lastBlock = nullptr;
+	// -- stage 2 -- 3 Band Compressor
+	MultiBandCompressor secondStageProcessor;
 
 	//==============================================================================
 	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

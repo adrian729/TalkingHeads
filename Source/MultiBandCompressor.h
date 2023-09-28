@@ -23,11 +23,21 @@ public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	MultiBandCompressor(
-		std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
-		std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)
-	);
+	MultiBandCompressor();
 	~MultiBandCompressor();
+
+	//==============================================================================
+	void setupMultiBandCompressor(
+		std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
+		std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+		ControlID lowMidCrossoverFreqID,
+		ControlID midHighCrossoverFreqID
+	);
+
+	//==============================================================================
+	CompressorBand* getLowBandCompressor();
+	CompressorBand* getMidBandCompressor();
+	CompressorBand* getHighBandCompressor();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -41,12 +51,10 @@ private:
 	// TODO: abstract the class from the processor stage of the plugin so that it can be used separately
 	//==============================================================================
 	// --- Object parameters management and information
-	const std::set<ControlID> multiBandCompressorIDs = {
-		// -- Low-mid crossover
-		ControlID::lowMidCrossoverFreq,
-		// -- Mid-high crossover
-		ControlID::midHighCrossoverFreq
-	};
+	std::set<ControlID> controlIDs;
+
+	ControlID lowMidCrossoverFreqID{ ControlID::countParams };
+	ControlID midHighCrossoverFreqID{ ControlID::countParams };
 
 	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
 	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };

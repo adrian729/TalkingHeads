@@ -13,51 +13,45 @@
 //==============================================================================
 // -- CONSTRUCTORS
 //==============================================================================
-MultiBandCompressor::MultiBandCompressor(
-	std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
-	std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)
-) :
-	parameterDefinitions(&parameterDefinitions),
-	pluginProcessorParameters(&pluginProcessorParameters)
+MultiBandCompressor::MultiBandCompressor()
 {
-	// -- Low Band Compressor
-	compressorBands[BandIDs::lowBand].setupCompressorBand(
-		parameterDefinitions,
-		pluginProcessorParameters,
-		ControlID::lowBandCompressorBypass,
-		ControlID::lowBandCompressorThreshold,
-		ControlID::lowBandCompressorAttack,
-		ControlID::lowBandCompressorRelease,
-		ControlID::lowBandCompressorRatio
-	);
-
-	// -- Mid Band Compressor
-	compressorBands[BandIDs::midBand].setupCompressorBand(
-		parameterDefinitions,
-		pluginProcessorParameters,
-		ControlID::midBandCompressorBypass,
-		ControlID::midBandCompressorThreshold,
-		ControlID::midBandCompressorAttack,
-		ControlID::midBandCompressorRelease,
-		ControlID::midBandCompressorRatio
-	);
-
-	// -- High Band Compressor
-	compressorBands[BandIDs::highBand].setupCompressorBand(
-		parameterDefinitions,
-		pluginProcessorParameters,
-		ControlID::highBandCompressorBypass,
-		ControlID::highBandCompressorThreshold,
-		ControlID::highBandCompressorAttack,
-		ControlID::highBandCompressorRelease,
-		ControlID::highBandCompressorRatio
-	);
 }
 
 MultiBandCompressor::~MultiBandCompressor()
 {
 	parameterDefinitions = nullptr;
 	pluginProcessorParameters = nullptr;
+}
+
+//==============================================================================
+void MultiBandCompressor::setupMultiBandCompressor(
+	std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
+	std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+	ControlID lowMidCrossoverFreqID,
+	ControlID midHighCrossoverFreqID
+)
+{
+	this->parameterDefinitions = &parameterDefinitions;
+	this->pluginProcessorParameters = &pluginProcessorParameters;
+	this->lowMidCrossoverFreqID = lowMidCrossoverFreqID;
+	this->midHighCrossoverFreqID = midHighCrossoverFreqID;
+	controlIDs = { lowMidCrossoverFreqID, midHighCrossoverFreqID };
+}
+
+//==============================================================================
+CompressorBand* MultiBandCompressor::getLowBandCompressor()
+{
+	return &compressorBands[BandIDs::lowBand];
+}
+
+CompressorBand* MultiBandCompressor::getMidBandCompressor()
+{
+	return &compressorBands[BandIDs::midBand];
+}
+
+CompressorBand* MultiBandCompressor::getHighBandCompressor()
+{
+	return &compressorBands[BandIDs::highBand];
 }
 
 //==============================================================================
@@ -130,23 +124,27 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 		filterBlocks[i] = juce::dsp::AudioBlock<float>(filterBuffers[i]);
 	}
 
-	juce::dsp::ProcessContextReplacing<float> lowBandContext(filterBlocks[BandIDs::lowBand]);
-	juce::dsp::ProcessContextReplacing<float> midBandContext(filterBlocks[BandIDs::midBand]);
-	juce::dsp::ProcessContextReplacing<float> highBandContext(filterBlocks[BandIDs::highBand]);
+	std::array<juce::dsp::ProcessContextReplacing<float>, BandIDs::countBands> filterContexts = {
+		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::lowBand]),
+		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::midBand]),
+		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::highBand])
+	};
 
 	// -- Low Band Filter
-	bandFilters[FilterIDs::lowpass1].process(lowBandContext);
-	bandFilters[FilterIDs::allpass].process(lowBandContext);
+	bandFilters[FilterIDs::lowpass1].process(filterContexts[BandIDs::lowBand]);
+	bandFilters[FilterIDs::allpass].process(filterContexts[BandIDs::lowBand]);
 
-	// -- Mid Band/High Band Filter
-	bandFilters[FilterIDs::highpass1].process(midBandContext);
-	filterBuffers[2] = filterBuffers[1]; // -- copy midBandBuffer with highpass1 to highBandBuffer
-	bandFilters[FilterIDs::lowpass2].process(midBandContext);
-	bandFilters[FilterIDs::highpass2].process(highBandContext);
+	// -- Mid Band/High Band -- Highpass1
+	bandFilters[FilterIDs::highpass1].process(filterContexts[BandIDs::midBand]);
+	filterBuffers[BandIDs::highBand] = filterBuffers[BandIDs::midBand]; // -- copy midBandBuffer with highpass1 to highBandBuffer
+	// -- Mid Band -- Highpass1 -> Lowpass2
+	bandFilters[FilterIDs::lowpass2].process(filterContexts[BandIDs::midBand]);
+	// -- High Band -- Highpass1 -> Highpass2
+	bandFilters[FilterIDs::highpass2].process(filterContexts[BandIDs::highBand]);
 
 	for (int i{ 0 }; i < BandIDs::countBands; ++i)
 	{
-		compressorBands[i].process(filterBlocks[i]);
+		compressorBands[i].process(filterContexts[i]);
 	}
 
 	outputBlock.clear();
@@ -186,7 +184,7 @@ void MultiBandCompressor::preProcess()
 
 void MultiBandCompressor::syncInBoundVariables()
 {
-	for (ControlID id : multiBandCompressorIDs)
+	for (ControlID id : controlIDs)
 	{
 		(*pluginProcessorParameters)[id].updateInBoundVariable();
 	}
@@ -197,15 +195,21 @@ void MultiBandCompressor::syncInBoundVariables()
 void MultiBandCompressor::postUpdatePluginParameters()
 {
 	// -- Low-Mid
-	lowMidCrossoverFreq = (*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].getNextValue();
-
-	bandFilters[FilterIDs::lowpass1].setCutoffFrequency(lowMidCrossoverFreq);
-	bandFilters[FilterIDs::highpass1].setCutoffFrequency(lowMidCrossoverFreq);
+	float newLowMidCrossoverFreq = (*pluginProcessorParameters)[ControlID::lowMidCrossoverFreq].getNextValue();
+	if (!juce::approximatelyEqual(newLowMidCrossoverFreq, lowMidCrossoverFreq))
+	{
+		lowMidCrossoverFreq = newLowMidCrossoverFreq;
+		bandFilters[FilterIDs::lowpass1].setCutoffFrequency(lowMidCrossoverFreq);
+		bandFilters[FilterIDs::highpass1].setCutoffFrequency(lowMidCrossoverFreq);
+	}
 
 	// -- Mid-High
-	midHighCrossoverFreq = (*pluginProcessorParameters)[ControlID::midHighCrossoverFreq].getNextValue();
-
-	bandFilters[FilterIDs::allpass].setCutoffFrequency(midHighCrossoverFreq);
-	bandFilters[FilterIDs::lowpass2].setCutoffFrequency(midHighCrossoverFreq);
-	bandFilters[FilterIDs::highpass2].setCutoffFrequency(midHighCrossoverFreq);
+	float newMidHighCrossoverFreq = (*pluginProcessorParameters)[ControlID::midHighCrossoverFreq].getNextValue();
+	if (!juce::approximatelyEqual(newMidHighCrossoverFreq, midHighCrossoverFreq))
+	{
+		midHighCrossoverFreq = newMidHighCrossoverFreq;
+		bandFilters[FilterIDs::allpass].setCutoffFrequency(midHighCrossoverFreq);
+		bandFilters[FilterIDs::lowpass2].setCutoffFrequency(midHighCrossoverFreq);
+		bandFilters[FilterIDs::highpass2].setCutoffFrequency(midHighCrossoverFreq);
+	}
 }

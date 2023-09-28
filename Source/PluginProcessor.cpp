@@ -164,37 +164,6 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 		// -- Second stage -- Compressor
 		secondStageProcessor.process(monoContext);
 
-		// -- TMP dummy pitch shifter
-		//int newSize = numSamples + (int)(samplesPitchShiftFactor * numSamples);
-		//float* tmp_resampledBlock = new float[newSize];
-		//for (int i{ 0 }; i < newSize; i++)
-		//{
-		//	float indexFactor = getIndexInterpolationFactor(numSamples, newSize);
-
-		//	int x_0 = floor(i * indexFactor);
-		//	int x_1 = ceil(i * indexFactor);
-		//	int y_0 = monoBlock.getChannelPointer(0)[x_0];
-		//	int y_1 = monoBlock.getChannelPointer(0)[x_1];
-
-		//	tmp_resampledBlock[i] = (y_0 * (x_1 - i) + y_1 * (i - x_0)) / (x_1 - x_0);
-		//}
-
-		//// Crossfade last block into resampled block
-		//for (int i{ 0 }; i < lastBlockSize; i++)
-		//{
-		//	float crossFadeFactor = lastBlockSize / (lastBlockSize - i);
-		//	tmp_resampledBlock[i] = blendValues(tmp_resampledBlock[i], lastBlock[i], crossFadeFactor);
-		//}
-
-		// Fill mono block with resampled block + crossfade
-		//for (int i{ 0 }; i < numSamples; i++)
-		//{
-		//	monoBlock.getChannelPointer(0)[i] = tmp_resampledBlock[i];
-		//}
-
-		//lastBlockSize = newSize - numSamples;
-		//lastBlock = std::make_unique<float[]>(lastBlockSize);
-
 		// -- Mono to stereo -- copy the mono channel to all output channels
 		for (int i{ 1 }; i < totalNumOutputChannels; i++)
 		{
@@ -389,7 +358,62 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 	// -- initialize first stage processor
 	firstStageProcessor.prepare(monoSpec);
 
-	// -- initialize first stage processor
+	// -- initialize second stage processor
+	secondStageProcessor.setupMultiBandCompressor(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::lowMidCrossoverFreq,
+		ControlID::midHighCrossoverFreq
+	);
+	// -- Low band filter -- lowpass1 -> allpass = lowpass band (----\) -- we add an allpass to avoid phase issues
+	secondStageProcessor.getLowBandCompressor()->setupCompressorBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		// -- Compressor
+		ControlID::lowBandCompressorBypass,
+		ControlID::lowBandCompressorThreshold,
+		ControlID::lowBandCompressorAttack,
+		ControlID::lowBandCompressorRelease,
+		ControlID::lowBandCompressorRatio,
+		// -- Filters
+		ControlID::lowMidCrossoverFreq,
+		ControlID::countParams,
+		juce::dsp::LinkwitzRileyFilterType::lowpass,
+		juce::dsp::LinkwitzRileyFilterType::allpass
+	);
+	// -- mid band filter -- highpass1 -> lowpass2 = mid band (/---\)
+	secondStageProcessor.getMidBandCompressor()->setupCompressorBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		// -- Compressor
+		ControlID::midBandCompressorBypass,
+		ControlID::midBandCompressorThreshold,
+		ControlID::midBandCompressorAttack,
+		ControlID::midBandCompressorRelease,
+		ControlID::midBandCompressorRatio,
+		// -- Filters
+		ControlID::lowMidCrossoverFreq,
+		ControlID::midHighCrossoverFreq,
+		juce::dsp::LinkwitzRileyFilterType::lowpass,
+		juce::dsp::LinkwitzRileyFilterType::highpass
+	);
+	// -- high band filter -- highpass1 -> highpass2 = highpass band (/----)
+	secondStageProcessor.getHighBandCompressor()->setupCompressorBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		// -- Compressor
+		ControlID::highBandCompressorBypass,
+		ControlID::highBandCompressorThreshold,
+		ControlID::highBandCompressorAttack,
+		ControlID::highBandCompressorRelease,
+		ControlID::highBandCompressorRatio,
+		// -- Filters
+		ControlID::countParams,
+		ControlID::midHighCrossoverFreq,
+		juce::dsp::LinkwitzRileyFilterType::allpass,
+		juce::dsp::LinkwitzRileyFilterType::highpass
+	);
+
 	secondStageProcessor.prepare(monoSpec);
 
 	// -- Setup smoothing
