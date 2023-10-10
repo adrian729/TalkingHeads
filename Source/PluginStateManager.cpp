@@ -100,6 +100,14 @@ std::array<juce::String, ControlID::countParams> PluginStateManager::createParam
 	tmp_paramIDs[ControlID::highBandCompressorRelease] = "highBandCompressorRelease";
 	tmp_paramIDs[ControlID::highBandCompressorRatio] = "highBandCompressorRatio";
 
+	// -- Phaser
+	tmp_paramIDs[ControlID::phaserBypass] = "phaserBypass";
+	tmp_paramIDs[ControlID::phaserRate] = "phaserRate";
+	tmp_paramIDs[ControlID::phaserDepth] = "phaserDepth";
+	tmp_paramIDs[ControlID::phaserCentreFrequency] = "phaserCentreFrequency";
+	tmp_paramIDs[ControlID::phaserFeedback] = "phaserFeedback";
+	tmp_paramIDs[ControlID::phaserMix] = "phaserMix";
+
 	return tmp_paramIDs;
 }
 
@@ -138,28 +146,36 @@ std::array<juce::String, ControlID::countParams> PluginStateManager::createParam
 	tmp_paramNames[ControlID::bandFilter3PeakQ] = "Band Filter 3 Q";
 
 	// -- stage 2 -- 3 Band Compressor
+	// -- Low-Mid Crossover
+	tmp_paramNames[ControlID::lowMidCrossoverFreq] = "Low-Mid Crossover Freq";
+	// -- Mid-High Crossover
+	tmp_paramNames[ControlID::midHighCrossoverFreq] = "Mid-High Crossover Freq";
 	// -- Low Band Compressor
 	tmp_paramNames[ControlID::lowBandCompressorBypass] = "Low Band Compressor Bypass";
 	tmp_paramNames[ControlID::lowBandCompressorThreshold] = "Low Band Compressor Threshold";
 	tmp_paramNames[ControlID::lowBandCompressorAttack] = "Low Band Compressor Attack";
 	tmp_paramNames[ControlID::lowBandCompressorRelease] = "Low Band Compressor Release";
 	tmp_paramNames[ControlID::lowBandCompressorRatio] = "Low Band Compressor Ratio";
-	// -- Low-Mid Crossover
-	tmp_paramNames[ControlID::lowMidCrossoverFreq] = "Low-Mid Crossover Freq";
 	// -- Mid Band Compressor
 	tmp_paramNames[ControlID::midBandCompressorBypass] = "Mid Band Compressor Bypass";
 	tmp_paramNames[ControlID::midBandCompressorThreshold] = "Mid Band Compressor Threshold";
 	tmp_paramNames[ControlID::midBandCompressorAttack] = "Mid Band Compressor Attack";
 	tmp_paramNames[ControlID::midBandCompressorRelease] = "Mid Band Compressor Release";
 	tmp_paramNames[ControlID::midBandCompressorRatio] = "Mid Band Compressor Ratio";
-	// -- Mid-High Crossover
-	tmp_paramNames[ControlID::midHighCrossoverFreq] = "Mid-High Crossover Freq";
 	// -- High Band Compressor
 	tmp_paramNames[ControlID::highBandCompressorBypass] = "High Band Compressor Bypass";
 	tmp_paramNames[ControlID::highBandCompressorThreshold] = "High Band Compressor Threshold";
 	tmp_paramNames[ControlID::highBandCompressorAttack] = "High Band Compressor Attack";
 	tmp_paramNames[ControlID::highBandCompressorRelease] = "High Band Compressor Release";
 	tmp_paramNames[ControlID::highBandCompressorRatio] = "High Band Compressor Ratio";
+
+	// -- Phaser
+	tmp_paramNames[ControlID::phaserBypass] = "Phaser Bypass";
+	tmp_paramNames[ControlID::phaserRate] = "Phaser Rate";
+	tmp_paramNames[ControlID::phaserDepth] = "Phaser Depth";
+	tmp_paramNames[ControlID::phaserCentreFrequency] = "Phaser Centre Frequency";
+	tmp_paramNames[ControlID::phaserFeedback] = "Phaser Feedback";
+	tmp_paramNames[ControlID::phaserMix] = "Phaser Mix";
 
 	return tmp_paramNames;
 }
@@ -175,33 +191,34 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	auto attackReleaseRange = juce::NormalisableRange<float>(5.f, 500.f, 1.f, 1.f);
 	auto ratioRange = juce::NormalisableRange<float>(1.f, 100.f, 0.1f, 0.4f);
 
-	// -- General -- Bypass ALL // Blend (dry/wet) // Pre Gain
+	//==============================================================================
+	// -- Bypass ALL
 	tmp_parameterDefinitions[ControlID::bypass] = ParameterDefinition(
 		ControlID::bypass,
 		parameterIDs[ControlID::bypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bypass],
 		false,
 		"",
 		SmoothingType::Linear,
 		0.01f
 	);
-
+	// -- Blend (dry/wet)
 	tmp_parameterDefinitions[ControlID::blend] = ParameterDefinition(
 		ControlID::blend,
 		parameterIDs[ControlID::blend],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::blend],
 		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
 		1.f,
 		"",
 		SmoothingType::Linear
 	);
-
+	// -- Pre Gain
 	tmp_parameterDefinitions[ControlID::preGain] = ParameterDefinition(
 		ControlID::preGain,
 		parameterIDs[ControlID::preGain],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::preGain],
 		gainRange,
 		0.f,
@@ -209,8 +226,8 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 		SmoothingType::NoSmoothing // -- Gain DSP module already has smoothing
 	);
 
-	// -- First Stage -- Gain // HPF, LPF, 3 Band EQ // 3 Band Compressor
-
+	//==============================================================================
+	// -- Multi Band EQ -- HPF, LPF, 3 Band 
 	juce::StringArray freqPassSlopeChoices;
 	for (int i = 0; i < 4; ++i)
 	{
@@ -219,22 +236,22 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 		str << " db/Oct";
 		freqPassSlopeChoices.add(str);
 	}
-
 	// -- HPF
 	tmp_parameterDefinitions[ControlID::highpassBypass] = ParameterDefinition(
 		ControlID::highpassBypass,
 		parameterIDs[ControlID::highpassBypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highpassBypass],
 		false,
 		"",
-		SmoothingType::NoSmoothing
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::highpassFreq] = ParameterDefinition(
 		ControlID::highpassFreq,
 		parameterIDs[ControlID::highpassFreq],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highpassFreq],
 		freqRange,
 		20.f,
@@ -246,26 +263,26 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::highpassSlope] = ParameterDefinition(
 		ControlID::highpassSlope,
 		parameterIDs[ControlID::highpassSlope],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highpassSlope],
 		freqPassSlopeChoices
 	);
-
 	// -- LPF
 	tmp_parameterDefinitions[ControlID::lowpassBypass] = ParameterDefinition(
 		ControlID::lowpassBypass,
 		parameterIDs[ControlID::lowpassBypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowpassBypass],
 		false,
 		"",
-		SmoothingType::NoSmoothing
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::lowpassFreq] = ParameterDefinition(
 		ControlID::lowpassFreq,
 		parameterIDs[ControlID::lowpassFreq],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowpassFreq],
 		freqRange,
 		20000.f,
@@ -276,26 +293,26 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::lowpassSlope] = ParameterDefinition(
 		ControlID::lowpassSlope,
 		parameterIDs[ControlID::lowpassSlope],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowpassSlope],
 		freqPassSlopeChoices
 	);
-
 	// -- Band Filter 1
 	tmp_parameterDefinitions[ControlID::bandFilter1Bypass] = ParameterDefinition(
 		ControlID::bandFilter1Bypass,
 		parameterIDs[ControlID::bandFilter1Bypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter1Bypass],
 		false,
 		"",
-		SmoothingType::NoSmoothing
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::bandFilter1PeakFreq] = ParameterDefinition(
 		ControlID::bandFilter1PeakFreq,
 		parameterIDs[ControlID::bandFilter1PeakFreq],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter1PeakFreq],
 		freqRange,
 		750.f,
@@ -306,7 +323,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::bandFilter1PeakGain] = ParameterDefinition(
 		ControlID::bandFilter1PeakGain,
 		parameterIDs[ControlID::bandFilter1PeakGain],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter1PeakGain],
 		gainRange,
 		0.f,
@@ -317,29 +334,29 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::bandFilter1PeakQ] = ParameterDefinition(
 		ControlID::bandFilter1PeakQ,
 		parameterIDs[ControlID::bandFilter1PeakQ],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter1PeakQ],
 		filterQRange,
 		1.f,
 		"",
 		SmoothingType::Linear
 	);
-
 	// -- Band Filter 2
 	tmp_parameterDefinitions[ControlID::bandFilter2Bypass] = ParameterDefinition(
 		ControlID::bandFilter2Bypass,
 		parameterIDs[ControlID::bandFilter2Bypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter2Bypass],
 		false,
 		"",
-		SmoothingType::NoSmoothing
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::bandFilter2PeakFreq] = ParameterDefinition(
 		ControlID::bandFilter2PeakFreq,
 		parameterIDs[ControlID::bandFilter2PeakFreq],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter2PeakFreq],
 		freqRange,
 		2000.f,
@@ -350,7 +367,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::bandFilter2PeakGain] = ParameterDefinition(
 		ControlID::bandFilter2PeakGain,
 		parameterIDs[ControlID::bandFilter2PeakGain],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter2PeakGain],
 		gainRange,
 		0.f,
@@ -361,29 +378,29 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::bandFilter2PeakQ] = ParameterDefinition(
 		ControlID::bandFilter2PeakQ,
 		parameterIDs[ControlID::bandFilter2PeakQ],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter2PeakQ],
 		filterQRange,
 		1.f,
 		"",
 		SmoothingType::Linear
 	);
-
 	// -- Band Filter 3
 	tmp_parameterDefinitions[ControlID::bandFilter3Bypass] = ParameterDefinition(
 		ControlID::bandFilter3Bypass,
 		parameterIDs[ControlID::bandFilter3Bypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter3Bypass],
 		false,
 		"",
-		SmoothingType::NoSmoothing
+		SmoothingType::Linear,
+		0.01f
 	);
 
 	tmp_parameterDefinitions[ControlID::bandFilter3PeakFreq] = ParameterDefinition(
 		ControlID::bandFilter3PeakFreq,
 		parameterIDs[ControlID::bandFilter3PeakFreq],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter3PeakFreq],
 		freqRange,
 		4000.f,
@@ -394,7 +411,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::bandFilter3PeakGain] = ParameterDefinition(
 		ControlID::bandFilter3PeakGain,
 		parameterIDs[ControlID::bandFilter3PeakGain],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter3PeakGain],
 		gainRange,
 		0.f,
@@ -405,7 +422,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::bandFilter3PeakQ] = ParameterDefinition(
 		ControlID::bandFilter3PeakQ,
 		parameterIDs[ControlID::bandFilter3PeakQ],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::bandFilter3PeakQ],
 		filterQRange,
 		1.f,
@@ -413,13 +430,35 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 		SmoothingType::Linear
 	);
 
-	// -- Second Stage -- 3 Band Compressor
-
+	//==============================================================================
+	// -- Multi Band Compressor
+	// -- Low-Mid Crossover
+	tmp_parameterDefinitions[ControlID::lowMidCrossoverFreq] = ParameterDefinition(
+		ControlID::lowMidCrossoverFreq,
+		parameterIDs[ControlID::lowMidCrossoverFreq],
+		V1_0_0,
+		parameterNames[ControlID::lowMidCrossoverFreq],
+		juce::NormalisableRange<float>(20.f, 999.f, 1.f, 0.198893842f),
+		400.f,
+		"Hz",
+		SmoothingType::Linear
+	);
+	// -- Mid-High Crossover
+	tmp_parameterDefinitions[ControlID::midHighCrossoverFreq] = ParameterDefinition(
+		ControlID::midHighCrossoverFreq,
+		parameterIDs[ControlID::midHighCrossoverFreq],
+		V1_0_0,
+		parameterNames[ControlID::midHighCrossoverFreq],
+		juce::NormalisableRange<float>(1000.f, 20000.f, 1.f, 0.198893842f),
+		2000.f,
+		"Hz",
+		SmoothingType::Linear
+	);
 	// -- Low Band Compressor
 	tmp_parameterDefinitions[ControlID::lowBandCompressorBypass] = ParameterDefinition(
 		ControlID::lowBandCompressorBypass,
 		parameterIDs[ControlID::lowBandCompressorBypass],
-		false,
+		V1_0_0,
 		parameterNames[ControlID::lowBandCompressorBypass],
 		false,
 		"",
@@ -430,7 +469,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::lowBandCompressorThreshold] = ParameterDefinition(
 		ControlID::lowBandCompressorThreshold,
 		parameterIDs[ControlID::lowBandCompressorThreshold],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowBandCompressorThreshold],
 		thresholdRange,
 		0.f,
@@ -441,7 +480,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::lowBandCompressorAttack] = ParameterDefinition(
 		ControlID::lowBandCompressorAttack,
 		parameterIDs[ControlID::lowBandCompressorAttack],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowBandCompressorAttack],
 		attackReleaseRange,
 		50.f,
@@ -452,7 +491,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::lowBandCompressorRelease] = ParameterDefinition(
 		ControlID::lowBandCompressorRelease,
 		parameterIDs[ControlID::lowBandCompressorRelease],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowBandCompressorRelease],
 		attackReleaseRange,
 		250.f,
@@ -463,31 +502,18 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::lowBandCompressorRatio] = ParameterDefinition(
 		ControlID::lowBandCompressorRatio,
 		parameterIDs[ControlID::lowBandCompressorRatio],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::lowBandCompressorRatio],
 		ratioRange,
 		1.f,
 		"",
 		SmoothingType::Linear
 	);
-
-	// -- Low-Mid Crossover
-	tmp_parameterDefinitions[ControlID::lowMidCrossoverFreq] = ParameterDefinition(
-		ControlID::lowMidCrossoverFreq,
-		parameterIDs[ControlID::lowMidCrossoverFreq],
-		1,
-		parameterNames[ControlID::lowMidCrossoverFreq],
-		juce::NormalisableRange<float>(20.f, 999.f, 1.f, 0.198893842f),
-		400.f,
-		"Hz",
-		SmoothingType::Linear
-	);
-
 	// -- Mid Band Compressor
 	tmp_parameterDefinitions[ControlID::midBandCompressorBypass] = ParameterDefinition(
 		ControlID::midBandCompressorBypass,
 		parameterIDs[ControlID::midBandCompressorBypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::midBandCompressorBypass],
 		false,
 		"",
@@ -498,7 +524,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::midBandCompressorThreshold] = ParameterDefinition(
 		ControlID::midBandCompressorThreshold,
 		parameterIDs[ControlID::midBandCompressorThreshold],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::midBandCompressorThreshold],
 		thresholdRange,
 		0.f,
@@ -509,7 +535,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::midBandCompressorAttack] = ParameterDefinition(
 		ControlID::midBandCompressorAttack,
 		parameterIDs[ControlID::midBandCompressorAttack],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::midBandCompressorAttack],
 		attackReleaseRange,
 		50.f,
@@ -520,7 +546,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::midBandCompressorRelease] = ParameterDefinition(
 		ControlID::midBandCompressorRelease,
 		parameterIDs[ControlID::midBandCompressorRelease],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::midBandCompressorRelease],
 		attackReleaseRange,
 		250.f,
@@ -531,31 +557,18 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::midBandCompressorRatio] = ParameterDefinition(
 		ControlID::midBandCompressorRatio,
 		parameterIDs[ControlID::midBandCompressorRatio],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::midBandCompressorRatio],
 		ratioRange,
 		1.f,
 		"",
 		SmoothingType::Linear
 	);
-
-	// -- Mid-High Crossover
-	tmp_parameterDefinitions[ControlID::midHighCrossoverFreq] = ParameterDefinition(
-		ControlID::midHighCrossoverFreq,
-		parameterIDs[ControlID::midHighCrossoverFreq],
-		1,
-		parameterNames[ControlID::midHighCrossoverFreq],
-		juce::NormalisableRange<float>(1000.f, 20000.f, 1.f, 0.198893842f),
-		2000.f,
-		"Hz",
-		SmoothingType::Linear
-	);
-
 	// -- High Band Compressor
 	tmp_parameterDefinitions[ControlID::highBandCompressorBypass] = ParameterDefinition(
 		ControlID::highBandCompressorBypass,
 		parameterIDs[ControlID::highBandCompressorBypass],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highBandCompressorBypass],
 		false,
 		"",
@@ -566,7 +579,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::highBandCompressorThreshold] = ParameterDefinition(
 		ControlID::highBandCompressorThreshold,
 		parameterIDs[ControlID::highBandCompressorThreshold],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highBandCompressorThreshold],
 		thresholdRange,
 		0.f,
@@ -577,7 +590,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::highBandCompressorAttack] = ParameterDefinition(
 		ControlID::highBandCompressorAttack,
 		parameterIDs[ControlID::highBandCompressorAttack],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highBandCompressorAttack],
 		attackReleaseRange,
 		50.f,
@@ -588,7 +601,7 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::highBandCompressorRelease] = ParameterDefinition(
 		ControlID::highBandCompressorRelease,
 		parameterIDs[ControlID::highBandCompressorRelease],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highBandCompressorRelease],
 		attackReleaseRange,
 		250.f,
@@ -599,10 +612,85 @@ std::array<ParameterDefinition, ControlID::countParams> PluginStateManager::crea
 	tmp_parameterDefinitions[ControlID::highBandCompressorRatio] = ParameterDefinition(
 		ControlID::highBandCompressorRatio,
 		parameterIDs[ControlID::highBandCompressorRatio],
-		1,
+		V1_0_0,
 		parameterNames[ControlID::highBandCompressorRatio],
 		ratioRange,
 		1.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	//==============================================================================
+	// -- Phaser
+	tmp_parameterDefinitions[ControlID::phaserBypass] = ParameterDefinition(
+		ControlID::phaserBypass,
+		parameterIDs[ControlID::phaserBypass],
+		V1_0_0,
+		parameterNames[ControlID::phaserBypass],
+		false,
+		"",
+		SmoothingType::Linear,
+		0.01f
+	);
+
+	// -- Phaser LFO
+	// -- LFO rate -- (0, 100) Hz
+	tmp_parameterDefinitions[ControlID::phaserRate] = ParameterDefinition(
+		ControlID::phaserRate,
+		parameterIDs[ControlID::phaserRate],
+		V1_0_0,
+		parameterNames[ControlID::phaserRate],
+		juce::NormalisableRange<float>(0.f, 100.f, 0.001f, 0.35f), // TODO: check skew factor
+		1.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	// -- LFO depth -- (0, 1)
+	tmp_parameterDefinitions[ControlID::phaserDepth] = ParameterDefinition(
+		ControlID::phaserDepth,
+		parameterIDs[ControlID::phaserDepth],
+		V1_0_0,
+		parameterNames[ControlID::phaserDepth],
+		juce::NormalisableRange<float>(0.f, 1.f, 0.001f, 0.5f),
+		0.5f,
+		"",
+		SmoothingType::Linear
+	);
+
+	// -- Phaser Filter -- Centre Frequency -- (20, 20000) Hz
+	tmp_parameterDefinitions[ControlID::phaserCentreFrequency] = ParameterDefinition(
+		ControlID::phaserCentreFrequency,
+		parameterIDs[ControlID::phaserCentreFrequency],
+		V1_0_0,
+		parameterNames[ControlID::phaserCentreFrequency],
+		freqRange,
+		1300.f,
+		"Hz",
+		SmoothingType::Linear
+	);
+
+	// -- Phaser other params
+	// -- Feedback -- (-1, 1)
+	tmp_parameterDefinitions[ControlID::phaserFeedback] = ParameterDefinition(
+		ControlID::phaserFeedback,
+		parameterIDs[ControlID::phaserFeedback],
+		V1_0_0,
+		parameterNames[ControlID::phaserFeedback],
+		juce::NormalisableRange<float>(-1.f, 1.f, 0.01f),
+		0.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	// -- Mix -- (0, 1)
+	tmp_parameterDefinitions[ControlID::phaserMix] = ParameterDefinition(
+		ControlID::phaserMix,
+		parameterIDs[ControlID::phaserMix],
+		V1_0_0,
+		parameterNames[ControlID::phaserMix],
+		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
+		0.5f,
 		"",
 		SmoothingType::Linear
 	);

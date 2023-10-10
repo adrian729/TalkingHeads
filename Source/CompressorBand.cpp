@@ -26,8 +26,8 @@ CompressorBand::~CompressorBand()
 
 //==============================================================================
 void CompressorBand::setupCompressorBand(
-	std::array<ParameterDefinition, ControlID::countParams> &parameterDefinitions,
-	std::array<ParameterObject, ControlID::countParams> &pluginProcessorParameters,
+	std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
+	std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
 	// -- Compressor
 	ControlID bypassID,
 	ControlID thresholdID,
@@ -48,7 +48,7 @@ void CompressorBand::setupCompressorBand(
 	this->attackID = attackID;
 	this->releaseID = releaseID;
 	this->ratioID = ratioID;
-	this->controlIDs = {bypassID, thresholdID, attackID, releaseID, ratioID};
+	this->controlIDs = { bypassID, thresholdID, attackID, releaseID, ratioID };
 	// -- Filters
 	this->firstFilterCrossoverFreqID = firstFilterCrossoverFreqID;
 	this->secondFilterCrossoverFreqID = secondFilterCrossoverFreqID;
@@ -57,7 +57,7 @@ void CompressorBand::setupCompressorBand(
 }
 
 //==============================================================================
-void CompressorBand::prepare(const juce::dsp::ProcessSpec &spec)
+void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
 {
 	auto sampleRate = spec.sampleRate;
 
@@ -75,7 +75,7 @@ void CompressorBand::prepare(const juce::dsp::ProcessSpec &spec)
 		filters[FilterIDs::secondFilter].setCutoffFrequency(secondFilterCrossoverFreq);
 	}
 
-	for (auto &filter : filters)
+	for (auto& filter : filters)
 	{
 		filter.prepare(spec);
 	}
@@ -98,14 +98,14 @@ void CompressorBand::prepare(const juce::dsp::ProcessSpec &spec)
 	(*pluginProcessorParameters)[ratioID].initSmoothing(sampleRate);
 }
 
-void CompressorBand::process(const juce::dsp::ProcessContextReplacing<float> &context)
+void CompressorBand::process(const juce::dsp::ProcessContextReplacing<float>& context)
 {
 	preProcess();
 
 	if (!juce::approximatelyEqual(bypass, 1.f))
 	{
 		// -- Filters
-		for (auto &filter : filters)
+		for (auto& filter : filters)
 		{
 			filter.process(context);
 		}
@@ -128,16 +128,6 @@ float CompressorBand::getLatency()
 
 //==============================================================================
 void CompressorBand::preProcess()
-{
-	syncInBoundVariables();
-}
-
-void CompressorBand::syncInBoundVariables()
-{
-	postUpdatePluginParameters();
-}
-
-void CompressorBand::postUpdatePluginParameters()
 {
 	// -- Filters
 	// -- First filter

@@ -15,6 +15,10 @@
 //==============================================================================
 MultiBandCompressor::MultiBandCompressor()
 {
+	// -- Create compressor bands
+	compressorBands[BandIDs::lowBand] = std::make_shared<CompressorBand>();
+	compressorBands[BandIDs::midBand] = std::make_shared<CompressorBand>();
+	compressorBands[BandIDs::highBand] = std::make_shared<CompressorBand>();
 }
 
 MultiBandCompressor::~MultiBandCompressor()
@@ -22,19 +26,19 @@ MultiBandCompressor::~MultiBandCompressor()
 }
 
 //==============================================================================
-CompressorBand* MultiBandCompressor::getLowBandCompressor()
+std::shared_ptr<CompressorBand> MultiBandCompressor::getLowBandCompressor()
 {
-	return &compressorBands[BandIDs::lowBand];
+	return compressorBands[BandIDs::lowBand];
 }
 
-CompressorBand* MultiBandCompressor::getMidBandCompressor()
+std::shared_ptr<CompressorBand> MultiBandCompressor::getMidBandCompressor()
 {
-	return &compressorBands[BandIDs::midBand];
+	return compressorBands[BandIDs::midBand];
 }
 
-CompressorBand* MultiBandCompressor::getHighBandCompressor()
+std::shared_ptr<CompressorBand> MultiBandCompressor::getHighBandCompressor()
 {
-	return &compressorBands[BandIDs::highBand];
+	return compressorBands[BandIDs::highBand];
 }
 
 //==============================================================================
@@ -50,9 +54,9 @@ void MultiBandCompressor::prepare(const juce::dsp::ProcessSpec& spec)
 	}
 
 	// -- Compressor bands
-	for (CompressorBand& band : compressorBands)
+	for (auto& band : compressorBands)
 	{
-		band.prepare(spec);
+		(*band).prepare(spec);
 	}
 }
 
@@ -84,7 +88,7 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 	// -- Process each band
 	for (int i{ 0 }; i < BandIDs::countBands; ++i)
 	{
-		compressorBands[i].process(bandContexts[i]);
+		(*compressorBands[i]).process(bandContexts[i]);
 	}
 
 	// -- add all bands to output block
@@ -97,9 +101,9 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 
 void MultiBandCompressor::reset()
 {
-	for (CompressorBand& band : compressorBands)
+	for (auto& band : compressorBands)
 	{
-		band.reset();
+		(*band).reset();
 	}
 }
 
@@ -107,9 +111,9 @@ void MultiBandCompressor::reset()
 float MultiBandCompressor::getLatency()
 {
 	float latency = 0.f;
-	for (CompressorBand& band : compressorBands)
+	for (auto& band : compressorBands)
 	{
-		latency += band.getLatency();
+		latency += (*band).getLatency();
 	}
 
 	return latency;

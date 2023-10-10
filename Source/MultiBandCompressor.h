@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <memory>
 #include <JuceHeader.h>
 #include "parameterTypes.h"
 #include "ParameterDefinition.h"
@@ -27,9 +28,9 @@ public:
 	~MultiBandCompressor();
 
 	//==============================================================================
-	CompressorBand* getLowBandCompressor();
-	CompressorBand* getMidBandCompressor();
-	CompressorBand* getHighBandCompressor();
+	std::shared_ptr<CompressorBand> getLowBandCompressor();
+	std::shared_ptr<CompressorBand> getMidBandCompressor();
+	std::shared_ptr<CompressorBand> getHighBandCompressor();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -50,8 +51,11 @@ private:
 		// -- Count
 		countBands
 	};
+
+	std::array<std::shared_ptr<CompressorBand>, BandIDs::countBands> compressorBands;
+
+	// -- Helper variables
 	std::array<juce::AudioBuffer<float>, BandIDs::countBands> filterBuffers;
 	std::array<juce::dsp::AudioBlock<float>, BandIDs::countBands> filterBlocks;
-	std::array<CompressorBand, BandIDs::countBands> compressorBands;
 
 };

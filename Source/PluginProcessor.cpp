@@ -133,7 +133,6 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 
 	preProcessBlock();
 
-
 	if (!juce::approximatelyEqual(bypass, 1.f))
 	{
 		// -- create the audio blocks and context
@@ -153,22 +152,19 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 		blendMixer.setWetLatency(getLatency());
 		blendMixer.pushDrySamples(createDryBlock(buffer, totalNumOutputChannels, numSamples));
 
-		// -- Process stages
+		// -- Process mono stages
 		juce::dsp::ProcessContextReplacing<float> monoContext(monoBlock);
 
-		// -- Pregain
-		preGainProcessor.process(monoContext);
-
-		// -- First stage -- EQ
-		firstStageProcessor.process(monoContext);
-		// -- Second stage -- Compressor
-		secondStageProcessor.process(monoContext);
+		monoChain.process(monoContext);
 
 		// -- Mono to stereo -- copy the mono channel to all output channels
 		for (int i{ 1 }; i < totalNumOutputChannels; i++)
 		{
-			audioBlock.getSingleChannelBlock(i).copyFrom(monoBlock);
+			outputBlock.getSingleChannelBlock(i).copyFrom(monoBlock);
 		}
+
+		// -- Process multi channel stages
+		multiChannelChain.process(context);
 
 		// -- mix dry wet
 		blendMixer.mixWetSamples(outputBlock);
@@ -218,16 +214,15 @@ void TalkingHeadsPluginAudioProcessor::setStateInformation(const void* data, int
 void TalkingHeadsPluginAudioProcessor::reset()
 {
 	blendMixer.reset();
-	preGainProcessor.reset();
-	firstStageProcessor.reset();
+
+	monoChain.reset();
 }
 
 //==============================================================================
 void TalkingHeadsPluginAudioProcessor::preProcessBlock()
 {
 	syncInBoundVariables();
-
-	firstStageProcessor.setSampleRate(getSampleRate());
+	postUpdatePluginParameters();
 }
 
 void TalkingHeadsPluginAudioProcessor::postProcessBlock()
@@ -240,17 +235,34 @@ void TalkingHeadsPluginAudioProcessor::syncInBoundVariables() {
 	{
 		param.updateInBoundVariable();
 	}
-
-	postUpdatePluginParameters();
 }
 
 void TalkingHeadsPluginAudioProcessor::postUpdatePluginParameters()
 {
 	bypass = pluginProcessorParameters[bypassID].getCurrentValue();
 	blend = pluginProcessorParameters[blendID].getCurrentValue();
-	preGainProcessor.setGainDecibels(pluginProcessorParameters[preGainID].getCurrentValue());
 
 	blendMixer.setWetMixProportion(std::max(0.f, blend - bypass)); // -- if bypassing, all dry. bypass should smooth from 0.f to 1.f when selected.
+
+	auto& preGain = monoChain.template get<preGainIndex>();
+	preGain.setGainDecibels(pluginProcessorParameters[preGainID].getCurrentValue());
+
+	phaserBypass = pluginProcessorParameters[phaserBypassID].getBoolValue();
+	multiChannelChain.template setBypassed<phaserIndex>(phaserBypass);
+
+	if (!phaserBypass)
+	{
+		auto& phaser = multiChannelChain.template get<phaserIndex>();
+		phaser.setRate(pluginProcessorParameters[phaserRateID].getCurrentValue());
+		phaser.setDepth(pluginProcessorParameters[phaserDepthID].getCurrentValue());
+		phaser.setCentreFrequency(pluginProcessorParameters[phaserCentreFrequencyID].getCurrentValue());
+		phaser.setFeedback(pluginProcessorParameters[phaserFeedbackID].getCurrentValue());
+		phaser.setMix(pluginProcessorParameters[phaserMixID].getCurrentValue());
+	}
+
+
+	auto& multiBandEQ = monoChain.template get<multiEQIndex>();
+	multiBandEQ.setSampleRate(getSampleRate());
 }
 
 float TalkingHeadsPluginAudioProcessor::getLatency()
@@ -306,16 +318,57 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 	auto busesLayout = getBusesLayout();
 	auto totalNumOutputChannels = busesLayout.getMainOutputChannels();
 
-	juce::dsp::ProcessSpec monoSpec;
-	monoSpec.sampleRate = sampleRate;
-	monoSpec.maximumBlockSize = samplesPerBlock;
-	monoSpec.numChannels = 1;
-
-	// -- initialize the member variables
 	// -- Bypass
 	bypass = pluginProcessorParameters[ControlID::bypass].getFloatValue();
 
 	// -- Blend
+	initBlendMixer(sampleRate, samplesPerBlock);
+
+	// -- pre gain
+	auto& preGain = monoChain.template get<preGainIndex>();
+	preGain.setRampDurationSeconds(0.01f);
+	preGain.setGainDecibels(pluginProcessorParameters[ControlID::preGain].getFloatValue());
+	// -- multi EQ
+	initMonoMultiEQ();
+	// -- multi Compressor
+	initMonoMultiCompressor();
+	// -- phaser
+	phaserBypass = pluginProcessorParameters[phaserBypassID].getBoolValue();
+	multiChannelChain.template setBypassed<phaserIndex>(phaserBypass);
+
+	auto& phaser = multiChannelChain.template get<phaserIndex>();
+	phaser.setRate(pluginProcessorParameters[ControlID::phaserRate].getFloatValue());
+	phaser.setDepth(pluginProcessorParameters[ControlID::phaserDepth].getFloatValue());
+	phaser.setCentreFrequency(pluginProcessorParameters[ControlID::phaserCentreFrequency].getFloatValue());
+	phaser.setFeedback(pluginProcessorParameters[ControlID::phaserFeedback].getFloatValue());
+	phaser.setMix(pluginProcessorParameters[ControlID::phaserMix].getFloatValue());
+
+	// -- Mono Chain
+	juce::dsp::ProcessSpec monoSpec;
+	monoSpec.sampleRate = sampleRate;
+	monoSpec.maximumBlockSize = samplesPerBlock;
+	monoSpec.numChannels = 1;
+	monoChain.prepare(monoSpec);
+
+	// -- Multi channel Chain
+	juce::dsp::ProcessSpec multiSpec;
+	multiSpec.sampleRate = sampleRate;
+	multiSpec.maximumBlockSize = samplesPerBlock;
+	multiSpec.numChannels = totalNumOutputChannels;
+	multiChannelChain.prepare(multiSpec);
+
+	// -- Setup smoothing
+	for (int i{ 0 }; i < ControlID::countParams; ++i)
+	{
+		pluginProcessorParameters[i].initSmoothing(sampleRate, parameterDefinitions[i].getRampLengthInSeconds());
+	}
+}
+
+void  TalkingHeadsPluginAudioProcessor::initBlendMixer(double sampleRate, int samplesPerBlock)
+{
+	auto busesLayout = getBusesLayout();
+	auto totalNumOutputChannels = busesLayout.getMainOutputChannels();
+
 	juce::dsp::ProcessSpec mixerSpec;
 	mixerSpec.sampleRate = sampleRate;
 	mixerSpec.maximumBlockSize = samplesPerBlock;
@@ -329,18 +382,61 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 
 	blendMixerBuffer.setSize(totalNumOutputChannels, samplesPerBlock); // -- allocate space
 	blendMixerBuffer.clear();
+}
 
-	// -- Gain
-	preGainProcessor.setRampDurationSeconds(0.01f);
-	preGainProcessor.setGainDecibels(pluginProcessorParameters[ControlID::preGain].getFloatValue());
-	preGainProcessor.prepare(monoSpec);
+void TalkingHeadsPluginAudioProcessor::initMonoMultiEQ()
+{
+	auto& multiBandEQ = monoChain.template get<multiEQIndex>();
+	multiBandEQ.setupMultiBandEQ(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		// -- HPF
+		ControlID::highpassBypass,
+		ControlID::highpassFreq,
+		ControlID::highpassSlope,
+		// -- LPF
+		ControlID::lowpassBypass,
+		ControlID::lowpassFreq,
+		ControlID::lowpassSlope,
+		// -- Band Filters
+		ControlID::bandFilter1Bypass,
+		ControlID::bandFilter2Bypass,
+		ControlID::bandFilter3Bypass
+	);
+	// -- band filter 1
+	multiBandEQ.getFirstBandFilter()->setupEQBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::bandFilter1Bypass,
+		ControlID::bandFilter1PeakFreq,
+		ControlID::bandFilter1PeakGain,
+		ControlID::bandFilter1PeakQ
+	);
+	// -- band filter 2
+	multiBandEQ.getSecondBandFilter()->setupEQBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::bandFilter2Bypass,
+		ControlID::bandFilter2PeakFreq,
+		ControlID::bandFilter2PeakGain,
+		ControlID::bandFilter2PeakQ
+	);
+	// -- band filter 3
+	multiBandEQ.getThirdBandFilter()->setupEQBand(
+		parameterDefinitions,
+		pluginProcessorParameters,
+		ControlID::bandFilter3Bypass,
+		ControlID::bandFilter3PeakFreq,
+		ControlID::bandFilter3PeakGain,
+		ControlID::bandFilter3PeakQ
+	);
+}
 
-	// -- initialize first stage processor
-	firstStageProcessor.prepare(monoSpec);
-
-	// -- initialize second stage processor
+void TalkingHeadsPluginAudioProcessor::initMonoMultiCompressor()
+{
+	auto& multiBandCompressor = monoChain.template get<multiCompIndex>();
 	// -- Low band filter -- lowpass1 -> allpass = lowpass band (----\) -- we add an allpass to avoid phase issues
-	secondStageProcessor.getLowBandCompressor()->setupCompressorBand(
+	multiBandCompressor.getLowBandCompressor()->setupCompressorBand(
 		parameterDefinitions,
 		pluginProcessorParameters,
 		// -- Compressor
@@ -356,7 +452,7 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 		juce::dsp::LinkwitzRileyFilterType::allpass
 	);
 	// -- mid band filter -- highpass1 -> lowpass2 = mid band (/---\)
-	secondStageProcessor.getMidBandCompressor()->setupCompressorBand(
+	multiBandCompressor.getMidBandCompressor()->setupCompressorBand(
 		parameterDefinitions,
 		pluginProcessorParameters,
 		// -- Compressor
@@ -372,7 +468,7 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 		juce::dsp::LinkwitzRileyFilterType::highpass
 	);
 	// -- high band filter -- highpass1 -> highpass2 = highpass band (/----)
-	secondStageProcessor.getHighBandCompressor()->setupCompressorBand(
+	multiBandCompressor.getHighBandCompressor()->setupCompressorBand(
 		parameterDefinitions,
 		pluginProcessorParameters,
 		// -- Compressor
@@ -387,14 +483,6 @@ void TalkingHeadsPluginAudioProcessor::initPluginMemberVariables(double sampleRa
 		juce::dsp::LinkwitzRileyFilterType::allpass,
 		juce::dsp::LinkwitzRileyFilterType::highpass
 	);
-
-	secondStageProcessor.prepare(monoSpec);
-
-	// -- Setup smoothing
-	for (int i{ 0 }; i < ControlID::countParams; ++i)
-	{
-		pluginProcessorParameters[i].initSmoothing(sampleRate, parameterDefinitions[i].getRampLengthInSeconds());
-	}
 }
 
 //==============================================================================

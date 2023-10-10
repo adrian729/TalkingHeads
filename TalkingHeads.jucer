@@ -14,6 +14,8 @@
               file="Source/CompressorBand.cpp"/>
         <FILE id="nm4go6" name="CompressorBand.h" compile="0" resource="0"
               file="Source/CompressorBand.h"/>
+        <FILE id="wFVJEr" name="EQBand.cpp" compile="1" resource="0" file="Source/EQBand.cpp"/>
+        <FILE id="m6jPxC" name="EQBand.h" compile="0" resource="0" file="Source/EQBand.h"/>
         <FILE id="F6YM8R" name="MultiBandCompressor.cpp" compile="1" resource="0"
               file="Source/MultiBandCompressor.cpp"/>
         <FILE id="xjGEtp" name="MultiBandCompressor.h" compile="0" resource="0"

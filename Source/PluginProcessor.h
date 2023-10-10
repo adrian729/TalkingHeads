@@ -75,15 +75,19 @@ private:
 	PluginStateManager pluginStateManager{};
 	std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions = pluginStateManager.getParameterDefinitions();
 
-	const std::set<ControlID> generalControlIDs = {
-		ControlID::bypass,
-		ControlID::blend,
-		ControlID::preGain
-	};
-
+	// -- General parameters
 	ControlID bypassID{ ControlID::bypass };
 	ControlID blendID{ ControlID::blend };
 	ControlID preGainID{ ControlID::preGain };
+
+	// -- Phaser
+	ControlID phaserBypassID{ ControlID::phaserBypass };
+	ControlID phaserRateID{ ControlID::phaserRate };
+	ControlID phaserDepthID{ ControlID::phaserDepth };
+	ControlID phaserCentreFrequencyID{ ControlID::phaserCentreFrequency };
+	ControlID phaserFeedbackID{ ControlID::phaserFeedback };
+	ControlID phaserMixID{ ControlID::phaserMix };
+
 
 	// --- Parameters state APVTS
 	const juce::String PARAMETERS_APVTS_ID = "ParametersAPVTS";
@@ -96,23 +100,45 @@ private:
 	// --- Object member variables
 
 	// --- stage 0: General -- Bypass ALL // Blend (dry/wet)
-	float bypass; // -- using a float to smooth the bypass transition
-	float blend;
+	float bypass{ 0.f }; // -- using a float to smooth the bypass transition
+	float blend{ 0.f };
 
-	juce::dsp::Gain<float> preGainProcessor;
 	juce::dsp::DryWetMixer<float> blendMixer;
 	juce::AudioBuffer<float> blendMixerBuffer; // -- buffer to replicate mono signal to all channels for the blend mixer
 
-	// -- stage 1 -- HPF, LPF, 3 Band EQ
-	MultiBandEQ firstStageProcessor{ parameterDefinitions, pluginProcessorParameters };
-	// -- stage 2 -- 3 Band Compressor
-	MultiBandCompressor secondStageProcessor;
+	// -- Mono Stages
+	enum monoChainIndex
+	{
+		preGainIndex,
+		multiEQIndex,
+		multiCompIndex
+	};
+	juce::dsp::ProcessorChain<
+		juce::dsp::Gain<float>,
+		MultiBandEQ,
+		MultiBandCompressor
+	> monoChain;
+
+	// -- Multi channel stages
+	enum multiChannelChainIndex
+	{
+		phaserIndex
+	};
+	juce::dsp::ProcessorChain<
+		juce::dsp::Phaser<float>
+	> multiChannelChain;
+
+	bool phaserBypass{ false };
 
 	//==============================================================================
 	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
 	void initPluginParameters();
 	void initPluginMemberVariables(double sampleRate, int samplesPerBlock);
+
+	void initBlendMixer(double sampleRate, int samplesPerBlock);
+	void initMonoMultiEQ();
+	void initMonoMultiCompressor();
 
 	//==============================================================================
 	void preProcessBlock();

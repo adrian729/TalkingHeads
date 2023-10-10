@@ -34,6 +34,16 @@ enum SmoothingType
 };
 
 //==============================================================================
+// --- VERSIONS
+//==============================================================================
+enum VersionIDs
+{
+	NoVersion,
+	// --- current version
+	V1_0_0,
+};
+
+//==============================================================================
 // --- CONTROL IDs -- for param definitions array access
 //==============================================================================
 enum ControlID
@@ -41,6 +51,7 @@ enum ControlID
 	// --- stage 0: General -- Bypass ALL // Blend (dry/wet) // Pre Gain
 	bypass,
 	blend,
+	// -- Pre Gain
 	preGain,
 
 	// -- stage 1 -- HPF, LPF, 3 Band EQ
@@ -69,28 +80,36 @@ enum ControlID
 	bandFilter3PeakQ,
 
 	// -- stage 2 -- 3 Band Compressor
+	// -- Low-Mid Crossover
+	lowMidCrossoverFreq,
+	// -- Mid-High Crossover
+	midHighCrossoverFreq,
 	// -- Low Band Compressor
 	lowBandCompressorBypass,
 	lowBandCompressorThreshold,
 	lowBandCompressorAttack,
 	lowBandCompressorRelease,
 	lowBandCompressorRatio,
-	// -- Low-Mid Crossover
-	lowMidCrossoverFreq,
 	// -- Mid Band Compressor
 	midBandCompressorBypass,
 	midBandCompressorThreshold,
 	midBandCompressorAttack,
 	midBandCompressorRelease,
 	midBandCompressorRatio,
-	// -- Mid-High Crossover
-	midHighCrossoverFreq,
 	// -- High Band Compressor
 	highBandCompressorBypass,
 	highBandCompressorThreshold,
 	highBandCompressorAttack,
 	highBandCompressorRelease,
 	highBandCompressorRatio,
+
+	// -- Phaser
+	phaserBypass,
+	phaserRate,
+	phaserDepth,
+	phaserCentreFrequency,
+	phaserFeedback,
+	phaserMix,
 
 	//==============================================================================
 	countParams // value to keep track of the total number of parameters

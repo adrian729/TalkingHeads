@@ -12,10 +12,12 @@
 
 #pragma once
 
+#include <memory>
 #include <JuceHeader.h>
 #include "parameterTypes.h"
 #include "ParameterDefinition.h"
 #include "ParameterObject.h"
+#include "EQBand.h"
 
 //==============================================================================
 class MultiBandEQ : public juce::dsp::ProcessorBase
@@ -24,11 +26,31 @@ public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	MultiBandEQ(
-		std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
-		std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters)
-	);
+	MultiBandEQ();
 	~MultiBandEQ();
+
+	//==============================================================================
+	void setupMultiBandEQ(
+		std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
+		std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters),
+		// -- HPF
+		ControlID highpassBypassID,
+		ControlID highpassFreqID,
+		ControlID highpassSlopeID,
+		// -- LPF
+		ControlID lowpassBypassID,
+		ControlID lowpassFreqID,
+		ControlID lowpassSlopeID,
+		// -- Band Filters
+		ControlID bandFilter1BypassID,
+		ControlID bandFilter2BypassID,
+		ControlID bandFilter3BypassID
+	);
+
+	//==============================================================================
+	EQBand* getFirstBandFilter();
+	EQBand* getSecondBandFilter();
+	EQBand* getThirdBandFilter();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -45,31 +67,17 @@ private:
 	// TODO: abstract the class from the processor stage of the plugin so that it can be used separately
 	//==============================================================================
 	// --- Object parameters management and information
-	const std::set<ControlID> firstStageControlIDs = {
-		// -- HPF
-		ControlID::highpassFreq,
-		ControlID::highpassSlope,
-		ControlID::highpassBypass,
-		// -- LPF
-		ControlID::lowpassFreq,
-		ControlID::lowpassSlope,
-		ControlID::lowpassBypass,
-		// -- Band Filter 1
-		ControlID::bandFilter1Bypass,
-		ControlID::bandFilter1PeakFreq,
-		ControlID::bandFilter1PeakGain,
-		ControlID::bandFilter1PeakQ,
-		// -- Band Filter 2
-		ControlID::bandFilter2Bypass,
-		ControlID::bandFilter2PeakFreq,
-		ControlID::bandFilter2PeakGain,
-		ControlID::bandFilter2PeakQ,
-		// -- Band Filter 3
-		ControlID::bandFilter3Bypass,
-		ControlID::bandFilter3PeakFreq,
-		ControlID::bandFilter3PeakGain,
-		ControlID::bandFilter3PeakQ
-	};
+	ControlID highpassBypassID{ ControlID::countParams };
+	ControlID highpassFreqID{ ControlID::countParams };
+	ControlID highpassSlopeID{ ControlID::countParams };
+
+	ControlID lowpassBypassID{ ControlID::countParams };
+	ControlID lowpassFreqID{ ControlID::countParams };
+	ControlID lowpassSlopeID{ ControlID::countParams };
+
+	ControlID bandFilter1BypassID{ ControlID::countParams };
+	ControlID bandFilter2BypassID{ ControlID::countParams };
+	ControlID bandFilter3BypassID{ ControlID::countParams };
 
 	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
 	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };
@@ -89,23 +97,15 @@ private:
 	};
 
 	// -- HPF
+	bool highpassBypassed{ false };
+	float highpassBypass{ 0.f };
 	float highpassFreq{ 0.f };
 	Slope highpassSlope{ Slope::Slope_12 };
 	// -- LPF
+	bool lowpassBypassed{ false };
+	float lowpassBypass{ 0.f };
 	float lowpassFreq{ 0.f };
 	Slope lowpassSlope{ Slope::Slope_12 };
-	// -- Band Filter 1
-	float bandFilter1PeakFreq{ 0.f };
-	float bandFilter1PeakGain{ 0.f };
-	float bandFilter1PeakQ{ 0.f };
-	// -- Band Filter 2
-	float bandFilter2PeakFreq{ 0.f };
-	float bandFilter2PeakGain{ 0.f };
-	float bandFilter2PeakQ{ 0.f };
-	// -- Band Filter 3
-	float bandFilter3PeakFreq{ 0.f };
-	float bandFilter3PeakGain{ 0.f };
-	float bandFilter3PeakQ{ 0.f };
 
 	//==============================================================================
 	// -- Processor Chain
@@ -123,21 +123,20 @@ private:
 
 	juce::dsp::ProcessorChain<
 		PassFilter,
-		Filter,
-		Filter,
-		Filter,
+		EQBand,
+		EQBand,
+		EQBand,
 		PassFilter
 	> processorChain;
 
 	//==============================================================================
 	// -- Filters
 	using Coefficients = juce::dsp::IIR::Coefficients<float>;
+
 	juce::ReferenceCountedArray<Coefficients> makeHighpass(double sampleRate);
 	juce::ReferenceCountedArray<Coefficients> makeLowpass(double sampleRate);
 
 	using CoefficientsPtr = Filter::CoefficientsPtr;
-	CoefficientsPtr makePeakFilter(float peakFreq, float peakGain, float peakQuality, double sampleRate);
-
 	void updateCoefficients(CoefficientsPtr& old, const CoefficientsPtr& replacements);
 
 	template <int Index, typename CoefficientType>
@@ -148,8 +147,7 @@ private:
 
 	//==============================================================================
 	void preProcess();
-	void postProcess();
-
-	void syncInBoundVariables();
-	bool postUpdatePluginParameter(ControlID controlID);
+	void postUpdateHighpassFilter();
+	void postUpdateLowpassFilter();
+	void postUpdateBandFilters();
 };
