@@ -28,10 +28,6 @@
               file="Source/ParameterObject.cpp"/>
         <FILE id="tsmAcj" name="ParameterObject.h" compile="0" resource="0"
               file="Source/ParameterObject.h"/>
-        <FILE id="GVwcrS" name="ParameterDefinition.cpp" compile="1" resource="0"
-              file="Source/ParameterDefinition.cpp"/>
-        <FILE id="JNJ5yf" name="ParameterDefinition.h" compile="0" resource="0"
-              file="Source/ParameterDefinition.h"/>
         <FILE id="n1B19a" name="parameterTypes.h" compile="0" resource="0"
               file="Source/parameterTypes.h"/>
       </GROUP>

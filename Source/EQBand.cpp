@@ -19,22 +19,18 @@ EQBand::EQBand()
 
 EQBand::~EQBand()
 {
-	parameterDefinitions = nullptr;
-	pluginProcessorParameters = nullptr;
 }
 
 //==============================================================================
 void EQBand::setupEQBand(
-	std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
-	std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+	std::shared_ptr<PluginStateManager> stateManager,
 	ControlID bypassID,
 	ControlID peakFreqID,
 	ControlID peakGainID,
 	ControlID peakQID
 )
 {
-	this->parameterDefinitions = &parameterDefinitions;
-	this->pluginProcessorParameters = &pluginProcessorParameters;
+	this->stateManager = stateManager;
 	this->bypassID = bypassID;
 	this->peakFreqID = peakFreqID;
 	this->peakGainID = peakGainID;
@@ -46,9 +42,9 @@ void EQBand::prepare(const juce::dsp::ProcessSpec& spec)
 {
 	sampleRate = spec.sampleRate;
 
-	peakFreq = (*pluginProcessorParameters)[peakFreqID].getFloatValue();
-	peakGain = (*pluginProcessorParameters)[peakGainID].getFloatValue();
-	peakQ = (*pluginProcessorParameters)[peakQID].getFloatValue();
+	peakFreq = stateManager->getFloatValue(peakFreqID);
+	peakGain = stateManager->getFloatValue(peakGainID);
+	peakQ = stateManager->getFloatValue(peakQID);
 
 	updateCoefficients(
 		filter.coefficients,
@@ -103,7 +99,7 @@ void EQBand::updateCoefficients(CoefficientsPtr& old, const CoefficientsPtr& rep
 //==============================================================================
 void EQBand::preProcess()
 {
-	float newBypass = (*pluginProcessorParameters)[bypassID].getCurrentValue();
+	float newBypass = stateManager->getCurrentValue(bypassID);
 	bool bypassChanged = !juce::approximatelyEqual(newBypass, bypass);
 	bypass = newBypass;
 
@@ -113,13 +109,13 @@ void EQBand::preProcess()
 		return;
 	}
 
-	float newPeakFreq = (*pluginProcessorParameters)[peakFreqID].getCurrentValue();
+	float newPeakFreq = stateManager->getCurrentValue(peakFreqID);
 	bool peakFreqChanged = !juce::approximatelyEqual(newPeakFreq, peakFreq);
 
-	float newPeakGain = (*pluginProcessorParameters)[peakGainID].getCurrentValue();
+	float newPeakGain = stateManager->getCurrentValue(peakGainID);
 	bool peakGainChanged = !juce::approximatelyEqual(newPeakGain, peakGain);
 
-	float newPeakQ = (*pluginProcessorParameters)[peakQID].getCurrentValue();
+	float newPeakQ = stateManager->getCurrentValue(peakQID);
 	bool peakQChanged = !juce::approximatelyEqual(newPeakQ, peakQ);
 
 

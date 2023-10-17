@@ -5,6 +5,11 @@
 	Created: 22 Sep 2023 5:01:45pm
 	Author:  Brutus729
 
+	Compressor with multiple bands:
+	-- Low band -- lowpass -> allpass = lowpass band (----\) -- we add an allpass to avoid phase issues
+	-- Mid band -- highpass -> lowpass = mid band (/---\)
+	-- High band -- highpass -> allpass = highpass band (/----)
+	* allpass used to align phase of all bands
   ==============================================================================
 */
 
@@ -13,8 +18,6 @@
 #include <memory>
 #include <JuceHeader.h>
 #include "parameterTypes.h"
-#include "ParameterDefinition.h"
-#include "ParameterObject.h"
 #include "CompressorBand.h"
 
 //==============================================================================
@@ -24,13 +27,24 @@ public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	MultiBandCompressor();
+	struct CompressorBandParamIDs
+	{
+		ControlID bypassID;
+		ControlID thresholdID;
+		ControlID attackID;
+		ControlID releaseID;
+		ControlID ratioID;
+	};
+	MultiBandCompressor(
+		std::shared_ptr<PluginStateManager> stateManager,
+		ControlID bypassID,
+		ControlID crossoverLowMidID,
+		ControlID crossoverMidHighID,
+		CompressorBandParamIDs lowBandParamIDs,
+		CompressorBandParamIDs midBandParamIDs,
+		CompressorBandParamIDs highBandParamIDs
+	);
 	~MultiBandCompressor();
-
-	//==============================================================================
-	std::shared_ptr<CompressorBand> getLowBandCompressor();
-	std::shared_ptr<CompressorBand> getMidBandCompressor();
-	std::shared_ptr<CompressorBand> getHighBandCompressor();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -42,7 +56,13 @@ public:
 
 private:
 	//==============================================================================
+	std::shared_ptr<PluginStateManager> stateManager;
+
+	ControlID bypassID{ ControlID::countParams };
 	// --- Object member variables
+	float bypass{ 0.f };
+	bool isBypassed{ false };
+
 	enum BandIDs
 	{
 		lowBand,
@@ -52,10 +72,13 @@ private:
 		countBands
 	};
 
-	std::array<std::shared_ptr<CompressorBand>, BandIDs::countBands> compressorBands;
+	std::array<CompressorBand, BandIDs::countBands> compressorBands;
 
 	// -- Helper variables
 	std::array<juce::AudioBuffer<float>, BandIDs::countBands> filterBuffers;
 	std::array<juce::dsp::AudioBlock<float>, BandIDs::countBands> filterBlocks;
+
+	//==============================================================================
+	void preProcess();
 
 };

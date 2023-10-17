@@ -12,8 +12,7 @@
 
 #include <JuceHeader.h>
 #include "parameterTypes.h"
-#include "ParameterDefinition.h"
-#include "ParameterObject.h"
+#include "PluginStateManager.h"
 
 //==============================================================================
 class EQBand : public  juce::dsp::ProcessorBase
@@ -27,8 +26,7 @@ public:
 
 	//==============================================================================
 	void setupEQBand(
-		std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
-		std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+		std::shared_ptr<PluginStateManager> stateManager,
 		ControlID bypassID,
 		ControlID peakFreqID,
 		ControlID peakGainID,
@@ -49,13 +47,12 @@ public:
 private:
 	//==============================================================================
 	// --- Object parameters management and information
+	std::shared_ptr<PluginStateManager> stateManager;
+
 	ControlID bypassID{ ControlID::countParams };
 	ControlID peakFreqID{ ControlID::countParams };
 	ControlID peakGainID{ ControlID::countParams };
 	ControlID peakQID{ ControlID::countParams };
-
-	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
-	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };
 
 	//==============================================================================
 	// --- Object member variables

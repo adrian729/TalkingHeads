@@ -18,15 +18,7 @@
 #define compareEnumToInt(ENUM, INT) (enumToInt(ENUM) == INT)
 #define compareIntToEnum(INT, ENUM) (INT == enumToInt(ENUM))
 
-enum ParameterType
-{
-	Bool,
-	Choice,
-	Float,
-	Int
-};
-
-enum SmoothingType
+enum class SmoothingType
 {
 	NoSmoothing,
 	Linear,
@@ -80,9 +72,9 @@ enum ControlID
 	bandFilter3PeakQ,
 
 	// -- stage 2 -- 3 Band Compressor
-	// -- Low-Mid Crossover
+	compressorBypass,
+	// -- Crossover
 	lowMidCrossoverFreq,
-	// -- Mid-High Crossover
 	midHighCrossoverFreq,
 	// -- Low Band Compressor
 	lowBandCompressorBypass,

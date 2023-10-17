@@ -13,12 +13,62 @@
 //==============================================================================
 // -- CONSTRUCTORS
 //==============================================================================
-MultiBandCompressor::MultiBandCompressor()
+MultiBandCompressor::MultiBandCompressor(
+	std::shared_ptr<PluginStateManager> stateManager,
+	ControlID bypassID,
+	ControlID crossoverLowMidID,
+	ControlID crossoverMidHighID,
+	CompressorBandParamIDs lowBandParamIDs,
+	CompressorBandParamIDs midBandParamIDs,
+	CompressorBandParamIDs highBandParamIDs
+) :
+	stateManager(stateManager),
+	bypassID(bypassID),
+	compressorBands{
+		CompressorBand(
+			stateManager,
+			// -- Compressor
+			lowBandParamIDs.bypassID,
+			lowBandParamIDs.thresholdID,
+			lowBandParamIDs.attackID,
+			lowBandParamIDs.releaseID,
+			lowBandParamIDs.ratioID,
+			// -- Crossover filters
+			crossoverLowMidID,
+			ControlID::countParams,
+			juce::dsp::LinkwitzRileyFilterType::lowpass,
+			juce::dsp::LinkwitzRileyFilterType::allpass
+		),
+		CompressorBand(
+			stateManager,
+			// -- Compressor
+			midBandParamIDs.bypassID,
+			midBandParamIDs.thresholdID,
+			midBandParamIDs.attackID,
+			midBandParamIDs.releaseID,
+			midBandParamIDs.ratioID,
+			// -- Crossover filters
+			crossoverLowMidID,
+			crossoverMidHighID,
+			juce::dsp::LinkwitzRileyFilterType::highpass,
+			juce::dsp::LinkwitzRileyFilterType::lowpass
+		),
+		CompressorBand(
+			stateManager,
+			// -- Compressor
+			highBandParamIDs.bypassID,
+			highBandParamIDs.thresholdID,
+			highBandParamIDs.attackID,
+			highBandParamIDs.releaseID,
+			highBandParamIDs.ratioID,
+			// -- Crossover filters
+			crossoverMidHighID,
+			ControlID::countParams,
+			juce::dsp::LinkwitzRileyFilterType::highpass,
+			juce::dsp::LinkwitzRileyFilterType::allpass
+		)
+	}
 {
-	// -- Create compressor bands
-	compressorBands[BandIDs::lowBand] = std::make_shared<CompressorBand>();
-	compressorBands[BandIDs::midBand] = std::make_shared<CompressorBand>();
-	compressorBands[BandIDs::highBand] = std::make_shared<CompressorBand>();
 }
 
 MultiBandCompressor::~MultiBandCompressor()
@@ -26,25 +76,9 @@ MultiBandCompressor::~MultiBandCompressor()
 }
 
 //==============================================================================
-std::shared_ptr<CompressorBand> MultiBandCompressor::getLowBandCompressor()
-{
-	return compressorBands[BandIDs::lowBand];
-}
-
-std::shared_ptr<CompressorBand> MultiBandCompressor::getMidBandCompressor()
-{
-	return compressorBands[BandIDs::midBand];
-}
-
-std::shared_ptr<CompressorBand> MultiBandCompressor::getHighBandCompressor()
-{
-	return compressorBands[BandIDs::highBand];
-}
-
-//==============================================================================
 void MultiBandCompressor::prepare(const juce::dsp::ProcessSpec& spec)
 {
-	auto sampleRate = spec.sampleRate;
+	bypass = stateManager->getFloatValue(bypassID);
 
 	// -- Filter buffers
 	for (juce::AudioBuffer<float>& buffer : filterBuffers)
@@ -56,13 +90,20 @@ void MultiBandCompressor::prepare(const juce::dsp::ProcessSpec& spec)
 	// -- Compressor bands
 	for (auto& band : compressorBands)
 	{
-		(*band).prepare(spec);
+		band.prepare(spec);
 	}
 }
 
 void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float>& context)
 {
-	// -- Get context for each band
+	preProcess();
+
+	if (juce::approximatelyEqual(bypass, 1.f))
+	{
+		return;
+	}
+
+	// -- Need to create a copy of the context for each band
 	juce::dsp::AudioBlock<const float> inputBlock = context.getInputBlock();
 	juce::dsp::AudioBlock<float> outputBlock = context.getOutputBlock();
 
@@ -79,7 +120,7 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 		filterBlocks[i] = juce::dsp::AudioBlock<float>(filterBuffers[i]);
 	}
 
-	std::array<juce::dsp::ProcessContextReplacing<float>, BandIDs::countBands> bandContexts = {
+	std::array<juce::dsp::ProcessContextReplacing<float>, BandIDs::countBands> bandContexts{
 		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::lowBand]),
 		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::midBand]),
 		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::highBand])
@@ -88,7 +129,7 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 	// -- Process each band
 	for (int i{ 0 }; i < BandIDs::countBands; ++i)
 	{
-		(*compressorBands[i]).process(bandContexts[i]);
+		compressorBands[i].process(bandContexts[i]);
 	}
 
 	// -- add all bands to output block
@@ -103,7 +144,7 @@ void MultiBandCompressor::reset()
 {
 	for (auto& band : compressorBands)
 	{
-		(*band).reset();
+		band.reset();
 	}
 }
 
@@ -113,8 +154,14 @@ float MultiBandCompressor::getLatency()
 	float latency = 0.f;
 	for (auto& band : compressorBands)
 	{
-		latency += (*band).getLatency();
+		latency += band.getLatency();
 	}
 
 	return latency;
+}
+
+//==============================================================================
+void MultiBandCompressor::preProcess()
+{
+	bypass = stateManager->getCurrentValue(bypassID);
 }

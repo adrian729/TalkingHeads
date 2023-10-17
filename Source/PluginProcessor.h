@@ -12,8 +12,6 @@
 #include <cmath>
 #include "parameterTypes.h"
 #include "PluginStateManager.h"
-#include "ParameterObject.h"
-#include "ParameterDefinition.h"
 #include "MultiBandEQ.h"
 #include "MultiBandCompressor.h"
 
@@ -70,10 +68,8 @@ public:
 private:
 	//==============================================================================
 	// --- Object parameters management and information
-
-	// --- Parameters definitions
-	PluginStateManager pluginStateManager{};
-	std::array<ParameterDefinition, ControlID::countParams> parameterDefinitions = pluginStateManager.getParameterDefinitions();
+	const juce::String APVTS_ID = "ParametersAPVTS";
+	std::shared_ptr<PluginStateManager> stateManager;
 
 	// -- General parameters
 	ControlID bypassID{ ControlID::bypass };
@@ -88,70 +84,54 @@ private:
 	ControlID phaserFeedbackID{ ControlID::phaserFeedback };
 	ControlID phaserMixID{ ControlID::phaserMix };
 
-
-	// --- Parameters state APVTS
-	const juce::String PARAMETERS_APVTS_ID = "ParametersAPVTS";
-	juce::AudioProcessorValueTreeState parametersAPVTS;
-
-	// --- Object parameters and inBound variables
-	std::array<ParameterObject, ControlID::countParams> pluginProcessorParameters;
-
 	//==============================================================================
 	// --- Object member variables
 
 	// --- stage 0: General -- Bypass ALL // Blend (dry/wet)
 	float bypass{ 0.f }; // -- using a float to smooth the bypass transition
 	float blend{ 0.f };
-
 	juce::dsp::DryWetMixer<float> blendMixer;
 	juce::AudioBuffer<float> blendMixerBuffer; // -- buffer to replicate mono signal to all channels for the blend mixer
 
+	// TODO: change setups for processors and add it to their constructors
 	// -- Mono Stages
-	enum monoChainIndex
-	{
-		preGainIndex,
-		multiEQIndex,
-		multiCompIndex
-	};
-	juce::dsp::ProcessorChain<
-		juce::dsp::Gain<float>,
-		MultiBandEQ,
-		MultiBandCompressor
-	> monoChain;
+
+	// -- Pre Gain
+	float preGainGain{ 0.f };
+	juce::dsp::Gain<float> preGain;
+
+	// -- Multi Band EQ
+	float multiBandEQSampleRate{ 0.f };
+	MultiBandEQ multiBandEQ;
+
+	// -- Multi Band Compressor
+	MultiBandCompressor multiBandCompressor;
 
 	// -- Multi channel stages
-	enum multiChannelChainIndex
-	{
-		phaserIndex
-	};
-	juce::dsp::ProcessorChain<
-		juce::dsp::Phaser<float>
-	> multiChannelChain;
 
-	bool phaserBypass{ false };
+	// -- Phaser
+	float phaserBypass{ 0.f };
+	bool isPhaserBypassed{ false };
+	float phaserRate{ 0.f };
+	float phaserDepth{ 0.f };
+	float phaserCentreFrequency{ 0.f };
+	float phaserFeedback{ 0.f };
+	float phaserMix{ 0.f };
+	juce::dsp::Phaser<float> phaser;
 
 	//==============================================================================
-	juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
-	void initPluginParameters();
-	void initPluginMemberVariables(double sampleRate, int samplesPerBlock);
-
 	void initBlendMixer(double sampleRate, int samplesPerBlock);
-	void initMonoMultiEQ();
-	void initMonoMultiCompressor();
+	void initMultiBandEQ(const juce::dsp::ProcessSpec& spec);
+	void initPhaser(const juce::dsp::ProcessSpec& spec);
 
 	//==============================================================================
 	void preProcessBlock();
 	void postProcessBlock();
 
-	void syncInBoundVariables();
 	void postUpdatePluginParameters();
-
-	float getLatency();
-
+	void postUpdatePhaserParameters();
 	//==============================================================================
-	float blendValues(float dry, float wet, float blend);
-	float getIndexInterpolationFactor(int originSize, int newSize);
+	float getLatency();
 
 	//==============================================================================
 	juce::dsp::AudioBlock<float> createDryBlock(juce::AudioBuffer<float>& buffer, int numChannels, int numSamples);

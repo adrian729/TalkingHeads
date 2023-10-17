@@ -15,8 +15,6 @@
 #include <memory>
 #include <JuceHeader.h>
 #include "parameterTypes.h"
-#include "ParameterDefinition.h"
-#include "ParameterObject.h"
 #include "EQBand.h"
 
 //==============================================================================
@@ -30,9 +28,9 @@ public:
 	~MultiBandEQ();
 
 	//==============================================================================
+	// TODO: move setup to constructor as we did with the multiband compressor
 	void setupMultiBandEQ(
-		std::array<ParameterDefinition, ControlID::countParams>(&parameterDefinitions),
-		std::array<ParameterObject, ControlID::countParams>(&pluginProcessorParameters),
+		std::shared_ptr<PluginStateManager> stateManager,
 		// -- HPF
 		ControlID highpassBypassID,
 		ControlID highpassFreqID,
@@ -67,6 +65,8 @@ private:
 	// TODO: abstract the class from the processor stage of the plugin so that it can be used separately
 	//==============================================================================
 	// --- Object parameters management and information
+	std::shared_ptr<PluginStateManager> stateManager;
+
 	ControlID highpassBypassID{ ControlID::countParams };
 	ControlID highpassFreqID{ ControlID::countParams };
 	ControlID highpassSlopeID{ ControlID::countParams };
@@ -78,9 +78,6 @@ private:
 	ControlID bandFilter1BypassID{ ControlID::countParams };
 	ControlID bandFilter2BypassID{ ControlID::countParams };
 	ControlID bandFilter3BypassID{ ControlID::countParams };
-
-	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
-	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };
 
 	//==============================================================================
 	// --- Object member variables

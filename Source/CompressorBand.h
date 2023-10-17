@@ -12,8 +12,7 @@
 
 #include <JuceHeader.h>
 #include "parameterTypes.h"
-#include "ParameterDefinition.h"
-#include "ParameterObject.h"
+#include "PluginStateManager.h"
 
 class CompressorBand : public  juce::dsp::ProcessorBase
 {
@@ -21,25 +20,21 @@ public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	CompressorBand();
-	~CompressorBand();
-
-	//==============================================================================
-	void setupCompressorBand(
-		std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
-		std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+	CompressorBand(
+		std::shared_ptr<PluginStateManager> stateManager,
 		// -- Compressor
 		ControlID bypassID,
 		ControlID thresholdID,
 		ControlID attackID,
 		ControlID releaseID,
 		ControlID ratioID,
-		// -- Filters
+		// -- Crossover filters
 		ControlID firstFilterCrossoverFreqID,
 		ControlID secondFilterCrossoverFreqID,
 		juce::dsp::LinkwitzRileyFilterType firstFilterType,
 		juce::dsp::LinkwitzRileyFilterType secondFilterType
 	);
+	~CompressorBand();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -52,28 +47,9 @@ public:
 private:
 	//==============================================================================
 	// --- Object parameters management and information
-	std::set<ControlID> controlIDs;
-
-	ControlID bypassID{ ControlID::countParams };
-	ControlID thresholdID{ ControlID::countParams };
-	ControlID attackID{ ControlID::countParams };
-	ControlID releaseID{ ControlID::countParams };
-	ControlID ratioID{ ControlID::countParams };
-
-	// -- if crossover freq ID == ControlID::countParams, that band is an allpass filter
-	ControlID firstFilterCrossoverFreqID{ ControlID::countParams };
-	ControlID secondFilterCrossoverFreqID{ ControlID::countParams };
-
-	std::array<ParameterDefinition, ControlID::countParams>(*parameterDefinitions) { nullptr };
-	std::array<ParameterObject, ControlID::countParams>(*pluginProcessorParameters) { nullptr };
-
-	//==============================================================================
-	// --- Object member variables
+	std::shared_ptr<PluginStateManager> stateManager;
 
 	// -- Filters
-	float firstFilterCrossoverFreq{ 0.f };
-	float secondFilterCrossoverFreq{ 0.f };
-
 	enum FilterIDs
 	{
 		firstFilter,
@@ -81,14 +57,29 @@ private:
 		// -- count
 		countFilters
 	};
+	std::array < ControlID, FilterIDs::countFilters> filterCrossoverFreqIDs;
+
+	// -- Compressor
+	ControlID bypassID{ ControlID::countParams };
+	ControlID thresholdID{ ControlID::countParams };
+	ControlID attackID{ ControlID::countParams };
+	ControlID releaseID{ ControlID::countParams };
+	ControlID ratioID{ ControlID::countParams };
+
+	//==============================================================================
+	// --- Object member variables
+
+	// -- Filters
+
+
+	std::array<float, FilterIDs::countFilters> crossoverFreqs{ 0.f };
+
 	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
 	std::array<Filter, FilterIDs::countFilters> filters;
 
-	juce::AudioBuffer<float> filtersBuffer;
-	juce::dsp::AudioBlock<float> filtersBlock;
-
 	// -- Compressor
 	float bypass{ 0.f };
+	bool isBypassed{ false };
 	float threshold{ 0.f };
 	float attack{ 0.f };
 	float release{ 0.f };
@@ -97,5 +88,10 @@ private:
 	juce::dsp::Compressor<float> compressor;
 
 	//==============================================================================
+	void prepareFilters(const juce::dsp::ProcessSpec& spec);
+	void prepareCompressor(const juce::dsp::ProcessSpec& spec);
+	//==============================================================================
 	void preProcess();
+	void preProcessFilters();
+	void preProcessCompressor();
 };

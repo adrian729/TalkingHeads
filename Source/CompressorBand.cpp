@@ -14,109 +14,66 @@
 //==============================================================================
 // -- CONSTRUCTORS
 //==============================================================================
-CompressorBand::CompressorBand()
-{
-}
-
-CompressorBand::~CompressorBand()
-{
-	parameterDefinitions = nullptr;
-	pluginProcessorParameters = nullptr;
-}
-
-//==============================================================================
-void CompressorBand::setupCompressorBand(
-	std::array<ParameterDefinition, ControlID::countParams>& parameterDefinitions,
-	std::array<ParameterObject, ControlID::countParams>& pluginProcessorParameters,
+CompressorBand::CompressorBand(
+	std::shared_ptr<PluginStateManager> stateManager,
 	// -- Compressor
 	ControlID bypassID,
 	ControlID thresholdID,
 	ControlID attackID,
 	ControlID releaseID,
 	ControlID ratioID,
-	// -- Filters
+	// -- Crossover filters
 	ControlID firstFilterCrossoverFreqID,
 	ControlID secondFilterCrossoverFreqID,
 	juce::dsp::LinkwitzRileyFilterType firstFilterType,
-	juce::dsp::LinkwitzRileyFilterType secondFilterType)
-{
-	this->parameterDefinitions = &parameterDefinitions;
-	this->pluginProcessorParameters = &pluginProcessorParameters;
+	juce::dsp::LinkwitzRileyFilterType secondFilterType
+) :
+	stateManager(stateManager),
 	// -- Compressor
-	this->bypassID = bypassID;
-	this->thresholdID = thresholdID;
-	this->attackID = attackID;
-	this->releaseID = releaseID;
-	this->ratioID = ratioID;
-	this->controlIDs = { bypassID, thresholdID, attackID, releaseID, ratioID };
+	bypassID(bypassID),
+	thresholdID(thresholdID),
+	attackID(attackID),
+	releaseID(releaseID),
+	ratioID(ratioID),
 	// -- Filters
-	this->firstFilterCrossoverFreqID = firstFilterCrossoverFreqID;
-	this->secondFilterCrossoverFreqID = secondFilterCrossoverFreqID;
+	filterCrossoverFreqIDs{ firstFilterCrossoverFreqID, secondFilterCrossoverFreqID }
+{
 	filters[FilterIDs::firstFilter].setType(firstFilterType);
 	filters[FilterIDs::secondFilter].setType(secondFilterType);
+}
+
+CompressorBand::~CompressorBand()
+{
 }
 
 //==============================================================================
 void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
 {
-	auto sampleRate = spec.sampleRate;
-
-	// -- Band Filters
-	// -- TODO: if we want smoothing for cutoff freqs we need to add it separately, as the variable is shared between bands
-	if (firstFilterCrossoverFreqID != ControlID::countParams)
-	{
-		firstFilterCrossoverFreq = (*pluginProcessorParameters)[firstFilterCrossoverFreqID].getFloatValue();
-		filters[FilterIDs::firstFilter].setCutoffFrequency(firstFilterCrossoverFreq);
-	}
-
-	if (secondFilterCrossoverFreqID != ControlID::countParams)
-	{
-		secondFilterCrossoverFreq = (*pluginProcessorParameters)[secondFilterCrossoverFreqID].getFloatValue();
-		filters[FilterIDs::secondFilter].setCutoffFrequency(secondFilterCrossoverFreq);
-	}
-
-	for (auto& filter : filters)
-	{
-		filter.prepare(spec);
-	}
-
-	// -- Compressor
-	bypass = (*pluginProcessorParameters)[bypassID].getBoolValue();
-	compressor.setThreshold((*pluginProcessorParameters)[thresholdID].getFloatValue());
-	compressor.setAttack((*pluginProcessorParameters)[attackID].getFloatValue());
-	compressor.setRelease((*pluginProcessorParameters)[releaseID].getFloatValue());
-	compressor.setRatio((*pluginProcessorParameters)[ratioID].getFloatValue());
-
-	compressor.prepare(spec);
-
-	// TODO: check smoothings are working, it makes noises
-	// -- Setup smoothing
-	(*pluginProcessorParameters)[bypassID].initSmoothing(sampleRate, 0.01f);
-	(*pluginProcessorParameters)[thresholdID].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[attackID].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[releaseID].initSmoothing(sampleRate);
-	(*pluginProcessorParameters)[ratioID].initSmoothing(sampleRate);
+	prepareFilters(spec);
+	prepareCompressor(spec);
 }
 
 void CompressorBand::process(const juce::dsp::ProcessContextReplacing<float>& context)
 {
 	preProcess();
 
-	if (!juce::approximatelyEqual(bypass, 1.f))
+	// -- Filters -- even if we bypass, we need to let pass only the band part of the audio
+	for (auto& filter : filters)
 	{
-		// -- Filters
-		for (auto& filter : filters)
-		{
-			filter.process(context);
-		}
-
-		// -- Compressor
+		filter.process(context);
+	}
+	if (!isBypassed)
+	{
 		compressor.process(context);
 	}
 }
 
 void CompressorBand::reset()
 {
+	for (auto& filter : filters)
+	{
+		filter.reset();
+	}
 	compressor.reset();
 }
 
@@ -127,38 +84,71 @@ float CompressorBand::getLatency()
 }
 
 //==============================================================================
+void CompressorBand::prepareFilters(const juce::dsp::ProcessSpec& spec)
+{
+	for (int i{ 0 }; i < FilterIDs::countFilters; ++i)
+	{
+		crossoverFreqs[i] = 500.f;
+		if (filters[i].getType() != juce::dsp::LinkwitzRileyFilterType::allpass)
+		{
+			crossoverFreqs[i] = stateManager->getFloatValue(filterCrossoverFreqIDs[i]);
+		}
+		filters[i].setCutoffFrequency(crossoverFreqs[i]);
+		filters[i].prepare(spec);
+	}
+}
+
+void CompressorBand::prepareCompressor(const juce::dsp::ProcessSpec& spec)
+{
+	bypass = stateManager->getBoolValue(bypassID);
+	compressor.setThreshold(stateManager->getFloatValue(thresholdID));
+	compressor.setAttack(stateManager->getFloatValue(attackID));
+	compressor.setRelease(stateManager->getFloatValue(releaseID));
+	compressor.setRatio(stateManager->getFloatValue(ratioID));
+	compressor.prepare(spec);
+}
+
+//==============================================================================
 void CompressorBand::preProcess()
 {
-	// -- Filters
-	// -- First filter
-	if (firstFilterCrossoverFreqID != ControlID::countParams)
+	preProcessFilters();
+	preProcessCompressor();
+}
+
+void CompressorBand::preProcessFilters()
+{
+	for (int i{ 0 }; i < FilterIDs::countFilters; ++i)
 	{
-		float newFirstFilterCrossoverFreq = (*pluginProcessorParameters)[firstFilterCrossoverFreqID].getFloatValue();
-		if (!juce::approximatelyEqual(newFirstFilterCrossoverFreq, firstFilterCrossoverFreq))
+		if (filters[i].getType() != juce::dsp::LinkwitzRileyFilterType::allpass)
 		{
-			firstFilterCrossoverFreq = newFirstFilterCrossoverFreq;
-			filters[FilterIDs::firstFilter].setCutoffFrequency(firstFilterCrossoverFreq);
+			float newCrossoverFreq = stateManager->getCurrentValue(filterCrossoverFreqIDs[i]);
+			if (!juce::approximatelyEqual(newCrossoverFreq, crossoverFreqs[i]))
+			{
+				crossoverFreqs[i] = newCrossoverFreq;
+				filters[i].setCutoffFrequency(crossoverFreqs[i]);
+			}
 		}
 	}
-	// -- Second filter
-	if (secondFilterCrossoverFreqID != ControlID::countParams)
+}
+
+void CompressorBand::preProcessCompressor()
+{
+	// -- Bypass
+	float newBypass = stateManager->getCurrentValue(bypassID);
+	bool bypassChanged = !juce::approximatelyEqual(newBypass, bypass);
+	if (bypassChanged)
 	{
-		float newSecondFilterCrossoverFreq = (*pluginProcessorParameters)[secondFilterCrossoverFreqID].getFloatValue();
-		if (!juce::approximatelyEqual(newSecondFilterCrossoverFreq, secondFilterCrossoverFreq))
-		{
-			secondFilterCrossoverFreq = newSecondFilterCrossoverFreq;
-			filters[FilterIDs::secondFilter].setCutoffFrequency(secondFilterCrossoverFreq);
-		}
+		bypass = newBypass;
+		isBypassed = juce::approximatelyEqual(bypass, 1.f);
 	}
 
-	// -- Compressor
-	// -- Bypass
-	float newBypass = (*pluginProcessorParameters)[bypassID].getCurrentValue();
-	bool bypassChanged = !juce::approximatelyEqual(newBypass, bypass);
-	bypass = newBypass;
+	if (isBypassed)
+	{
+		return;
+	}
 
 	// -- Threshold
-	float newThreshold = (*pluginProcessorParameters)[thresholdID].getCurrentValue();
+	float newThreshold = stateManager->getCurrentValue(thresholdID);
 	if (!juce::approximatelyEqual(newThreshold, threshold))
 	{
 		threshold = newThreshold;
@@ -166,7 +156,7 @@ void CompressorBand::preProcess()
 	}
 
 	// -- Attack
-	float newAttack = (*pluginProcessorParameters)[attackID].getCurrentValue();
+	float newAttack = stateManager->getCurrentValue(attackID);
 	if (!juce::approximatelyEqual(newAttack, attack))
 	{
 		attack = newAttack;
@@ -174,7 +164,7 @@ void CompressorBand::preProcess()
 	}
 
 	// -- Release
-	float newRelease = (*pluginProcessorParameters)[releaseID].getCurrentValue();
+	float newRelease = stateManager->getCurrentValue(releaseID);
 	if (!juce::approximatelyEqual(newRelease, release))
 	{
 		release = newRelease;
@@ -182,11 +172,10 @@ void CompressorBand::preProcess()
 	}
 
 	// -- Ratio -- when bypassing we smooth the ratio to 1.f
-	float newRatio = (*pluginProcessorParameters)[ratioID].getCurrentValue();
-	bool ratioChanged = !juce::approximatelyEqual(newRatio, ratio);
-	if (ratioChanged || bypassChanged)
+	float newRatio = stateManager->getCurrentValue(ratioID);
+	if (!juce::approximatelyEqual(newRatio, ratio) || bypassChanged)
 	{
-		ratio = std::max(newRatio * (1.f - bypass), 1.f);
-		compressor.setRatio(ratio);
+		ratio = newRatio;
+		compressor.setRatio(juce::jmax(1.f, ratio * (1.f - bypass)));
 	}
 }

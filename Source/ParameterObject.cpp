@@ -11,15 +11,13 @@
 //==============================================================================
 ParameterObject::ParameterObject() :
 	parameter(nullptr),
-	parameterType(ParameterType::Float),
-	smoothingType(SmoothingType::NoSmoothing)
+	parameterType(ParameterType::Float)
 {
 }
 
-ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType, SmoothingType smoothingType) :
+ParameterObject::ParameterObject(juce::RangedAudioParameter* parameter, ParameterType parameterType) :
 	parameter(parameter),
-	parameterType(parameterType),
-	smoothingType(smoothingType)
+	parameterType(parameterType)
 {
 	// -- Update the inBound variables to initialize them
 	updateInBoundVariable();
@@ -30,8 +28,55 @@ ParameterObject::~ParameterObject()
 	parameter = nullptr;
 }
 
+ParameterObject::ParameterObject(const ParameterObject& other) : // copy constructor
+	parameter(other.parameter),
+	parameterType(other.parameterType),
+	inBoundVariable(other.inBoundVariable.load(std::memory_order_relaxed))
+{
+}
+
+ParameterObject::ParameterObject(ParameterObject&& other) noexcept : // move constructor
+	parameter(std::exchange(other.parameter, nullptr)),
+	parameterType(other.parameterType),
+	inBoundVariable(other.inBoundVariable.load(std::memory_order_relaxed))
+{
+}
+
 //==============================================================================
-// -- Parameter getters
+ParameterObject& ParameterObject::operator=(const ParameterObject& other) // copy assignment
+{
+	if (this == &other)
+	{
+		return *this;
+	}
+	// -- Parameter data
+	parameter = other.parameter;
+	parameterType = other.parameterType;
+	// -- InBound value
+	inBoundVariable = other.inBoundVariable.load(std::memory_order_relaxed);
+
+	return *this;
+}
+
+ParameterObject& ParameterObject::operator=(ParameterObject&& other) noexcept // move assignment
+{
+	if (this == &other)
+	{
+		return *this;
+	}
+	// -- Parameter data
+	std::swap(parameterType, other.parameterType);
+	std::swap(parameter, other.parameter);
+	// -- InBound value
+	float tempInBoundVariable = inBoundVariable.load(std::memory_order_relaxed);
+	inBoundVariable = other.inBoundVariable.load(std::memory_order_relaxed);
+	other.inBoundVariable = tempInBoundVariable;
+
+	return *this;
+}
+
+//==============================================================================
+// -- Parameter
 ParameterType ParameterObject::getParameterType()
 {
 	return parameterType;
@@ -45,14 +90,6 @@ juce::NormalisableRange<float> ParameterObject::getParameterRange()
 juce::RangedAudioParameter* ParameterObject::getParameter()
 {
 	return parameter;
-}
-
-template <typename T>
-T ParameterObject::getParameter()
-{
-	T t_parameter = dynamic_cast<T>(parameter);
-	jassert(t_parameter != nullptr);
-	return t_parameter;
 }
 
 juce::AudioParameterBool* ParameterObject::getParameterBool()
@@ -75,8 +112,17 @@ juce::AudioParameterInt* ParameterObject::getParameterInt()
 	return getParameter<juce::AudioParameterInt*>();
 }
 
+template <typename T>
+T ParameterObject::getParameter()
+{
+	T t_parameter = dynamic_cast<T>(parameter);
+	jassert(t_parameter != nullptr);
+	return t_parameter;
+}
+
+
 //==============================================================================
-// -- InBound variable getters
+// -- InBound variable
 float ParameterObject::getInBoundVariable()
 {
 	return inBoundVariable.load(std::memory_order_relaxed);
@@ -109,166 +155,23 @@ int ParameterObject::getIntValue()
 }
 
 //==============================================================================
-// -- Smoothing
-void ParameterObject::initSmoothing(double sampleRate, double rampLengthInSeconds)
-{
-	if (smoothingType == SmoothingType::NoSmoothing)
-	{
-		return;
-	}
-
-	reset(sampleRate, rampLengthInSeconds);
-	setCurrentAndTargetValue(getFloatValue());
-}
-
-float ParameterObject::getCurrentValue()
-{
-	if (smoothingType == SmoothingType::NoSmoothing)
-	{
-		return getFloatValue();
-	}
-
-	float normalizedValue = 0.f;
-	switch (smoothingType)
-	{
-	case SmoothingType::Linear:
-		normalizedValue = linearSmoothedValue.getCurrentValue();
-		break;
-	case SmoothingType::Multiplicative:
-		normalizedValue = multiplicativeSmoothedValue.getCurrentValue();
-		break;
-	}
-	// Denormalize value to the selected range
-	return getParameterRange().convertFrom0to1(normalizedValue);
-}
-
-float ParameterObject::getNextValue()
-{
-	if (smoothingType == SmoothingType::NoSmoothing)
-	{
-		return getFloatValue();
-	}
-
-	float normalizedValue = 0.f;
-	for (int i = 0; i < 100; ++i)
-	{
-		switch (smoothingType)
-		{
-		case Linear:
-			normalizedValue = linearSmoothedValue.getNextValue();
-			break;
-		case Multiplicative:
-			normalizedValue = multiplicativeSmoothedValue.getNextValue();
-			break;
-		}
-	}
-	// Denormalize value to the selected range
-	return getParameterRange().convertFrom0to1(juce::jlimit(0.f, 1.f, normalizedValue));
-}
-
-void ParameterObject::setCurrentAndTargetValue(float newValue)
-{
-	if (smoothingType == SmoothingType::NoSmoothing)
-	{
-		return;
-	}
-
-	// Need to normalize the inBound variable to the range [0, 1] first
-	float normalizedNewValue = getParameterRange().convertTo0to1(newValue);
-	switch (smoothingType)
-	{
-	case SmoothingType::Linear:
-		linearSmoothedValue.setCurrentAndTargetValue(normalizedNewValue);
-		break;
-	case SmoothingType::Multiplicative:
-		multiplicativeSmoothedValue.setCurrentAndTargetValue(safeMultiplicativeValue(normalizedNewValue));
-		break;
-	}
-}
-
-void ParameterObject::setTargetValue(float newValue)
-{
-	if (smoothingType == SmoothingType::NoSmoothing)
-	{
-		return;
-	}
-
-	// Need to normalize the inBound variable to the range [0, 1] first
-	float normalizedNewValue = getParameterRange().convertTo0to1(newValue);
-	switch (smoothingType)
-	{
-	case SmoothingType::Linear:
-		linearSmoothedValue.setTargetValue(normalizedNewValue);
-		break;
-	case SmoothingType::Multiplicative:
-		multiplicativeSmoothedValue.setTargetValue(safeMultiplicativeValue(normalizedNewValue));
-		break;
-	}
-}
-
-void ParameterObject::reset(double sampleRate, double rampLengthInSeconds)
-{
-	if (smoothingType == SmoothingType::NoSmoothing)
-	{
-		return;
-	}
-
-	switch (smoothingType)
-	{
-	case SmoothingType::Linear:
-		linearSmoothedValue.reset(sampleRate, rampLengthInSeconds);
-		break;
-	case SmoothingType::Multiplicative:
-		multiplicativeSmoothedValue.reset(sampleRate, rampLengthInSeconds);
-		break;
-	}
-}
-
-//==============================================================================
-void ParameterObject::updateInBoundVariable()
+float ParameterObject::updateInBoundVariable()
 {
 	// -- Update the inBound variable
 	switch (parameterType)
 	{
-	case Bool:
+	case ParameterType::Bool:
 		inBoundVariable = static_cast<float>(getParameterBool()->get());
 		break;
-	case Choice:
+	case ParameterType::Choice:
 		inBoundVariable = static_cast<float>(getParameterChoice()->getIndex());
 		break;
-	case Int:
+	case ParameterType::Int:
 		inBoundVariable = static_cast<float>(getParameterInt()->get());
 		break;
-	case Float:
+	case ParameterType::Float:
 		inBoundVariable = getParameterFloat()->get();
 	}
 
-	setTargetValue(inBoundVariable);
-	getNextValue();
-}
-
-//==============================================================================
-float  ParameterObject::safeMultiplicativeValue(float value, float smallestValue)
-{
-	return juce::approximatelyEqual(value, 0.f) ? smallestValue : value;
-}
-
-//==============================================================================
-ParameterObject& ParameterObject::operator=(const ParameterObject& param)
-{
-	if (this == &param)
-	{
-		return *this;
-	}
-	// -- Parameter data
-	parameter = param.parameter;
-	parameterType = param.parameterType;
-	// -- InBound value
-	inBoundVariable = param.inBoundVariable.load(std::memory_order_relaxed);
-	// -- Smoothing
-	smoothingType = param.smoothingType;
-	linearSmoothedValue = juce::LinearSmoothedValue<float>(param.linearSmoothedValue);
-	multiplicativeSmoothedValue = juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative>(param.multiplicativeSmoothedValue);
-
-	return *this;
+	return getInBoundVariable();
 }
