@@ -27,6 +27,7 @@ MultiBandCompressor::MultiBandCompressor(
 	compressorBands{
 		CompressorBand(
 			stateManager,
+			lowBandParamIDs.muteID,
 			// -- Compressor
 			lowBandParamIDs.bypassID,
 			lowBandParamIDs.thresholdID,
@@ -41,6 +42,7 @@ MultiBandCompressor::MultiBandCompressor(
 		),
 		CompressorBand(
 			stateManager,
+			midBandParamIDs.muteID,
 			// -- Compressor
 			midBandParamIDs.bypassID,
 			midBandParamIDs.thresholdID,
@@ -55,6 +57,7 @@ MultiBandCompressor::MultiBandCompressor(
 		),
 		CompressorBand(
 			stateManager,
+			highBandParamIDs.muteID,
 			// -- Compressor
 			highBandParamIDs.bypassID,
 			highBandParamIDs.thresholdID,
@@ -120,16 +123,11 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 		filterBlocks[i] = juce::dsp::AudioBlock<float>(filterBuffers[i]);
 	}
 
-	std::array<juce::dsp::ProcessContextReplacing<float>, BandIDs::countBands> bandContexts{
-		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::lowBand]),
-		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::midBand]),
-		juce::dsp::ProcessContextReplacing<float>(filterBlocks[BandIDs::highBand])
-	};
-
 	// -- Process each band
 	for (int i{ 0 }; i < BandIDs::countBands; ++i)
 	{
-		compressorBands[i].process(bandContexts[i]);
+		juce::dsp::ProcessContextReplacing<float> bandContext(filterBlocks[i]);
+		compressorBands[i].process(bandContext);
 	}
 
 	// -- add all bands to output block

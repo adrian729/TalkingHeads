@@ -25,6 +25,7 @@ TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor() :
 		ControlID::lowMidCrossoverFreq,
 		ControlID::midHighCrossoverFreq,
 		{
+			ControlID::lowBandCompressorMute,
 			ControlID::lowBandCompressorBypass,
 			ControlID::lowBandCompressorThreshold,
 			ControlID::lowBandCompressorAttack,
@@ -32,6 +33,7 @@ TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor() :
 			ControlID::lowBandCompressorRatio
 		},
 		{
+			ControlID::midBandCompressorMute,
 			ControlID::midBandCompressorBypass,
 			ControlID::midBandCompressorThreshold,
 			ControlID::midBandCompressorAttack,
@@ -39,6 +41,7 @@ TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor() :
 			ControlID::midBandCompressorRatio
 		},
 		{
+			ControlID::highBandCompressorMute,
 			ControlID::highBandCompressorBypass,
 			ControlID::highBandCompressorThreshold,
 			ControlID::highBandCompressorAttack,

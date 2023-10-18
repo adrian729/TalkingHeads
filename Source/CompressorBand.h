@@ -22,6 +22,7 @@ public:
 	//==============================================================================
 	CompressorBand(
 		std::shared_ptr<PluginStateManager> stateManager,
+		ControlID muteID,
 		// -- Compressor
 		ControlID bypassID,
 		ControlID thresholdID,
@@ -49,6 +50,15 @@ private:
 	// --- Object parameters management and information
 	std::shared_ptr<PluginStateManager> stateManager;
 
+	ControlID muteID{ ControlID::countParams };
+
+	// -- Compressor
+	ControlID bypassID{ ControlID::countParams };
+	ControlID thresholdID{ ControlID::countParams };
+	ControlID attackID{ ControlID::countParams };
+	ControlID releaseID{ ControlID::countParams };
+	ControlID ratioID{ ControlID::countParams };
+
 	// -- Filters
 	enum FilterIDs
 	{
@@ -59,23 +69,10 @@ private:
 	};
 	std::array < ControlID, FilterIDs::countFilters> filterCrossoverFreqIDs;
 
-	// -- Compressor
-	ControlID bypassID{ ControlID::countParams };
-	ControlID thresholdID{ ControlID::countParams };
-	ControlID attackID{ ControlID::countParams };
-	ControlID releaseID{ ControlID::countParams };
-	ControlID ratioID{ ControlID::countParams };
-
 	//==============================================================================
 	// --- Object member variables
-
-	// -- Filters
-
-
-	std::array<float, FilterIDs::countFilters> crossoverFreqs{ 0.f };
-
-	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
-	std::array<Filter, FilterIDs::countFilters> filters;
+	float mute{ 0.f };
+	bool isMuted{ false };
 
 	// -- Compressor
 	float bypass{ 0.f };
@@ -86,6 +83,12 @@ private:
 	float ratio{ 0.f };
 
 	juce::dsp::Compressor<float> compressor;
+
+	// -- Filters
+	std::array<float, FilterIDs::countFilters> crossoverFreqs{ 0.f };
+
+	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
+	std::array<Filter, FilterIDs::countFilters> filters;
 
 	//==============================================================================
 	void prepareFilters(const juce::dsp::ProcessSpec& spec);

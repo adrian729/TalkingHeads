@@ -16,6 +16,7 @@
 //==============================================================================
 CompressorBand::CompressorBand(
 	std::shared_ptr<PluginStateManager> stateManager,
+	ControlID muteID,
 	// -- Compressor
 	ControlID bypassID,
 	ControlID thresholdID,
@@ -29,6 +30,7 @@ CompressorBand::CompressorBand(
 	juce::dsp::LinkwitzRileyFilterType secondFilterType
 ) :
 	stateManager(stateManager),
+	muteID(muteID),
 	// -- Compressor
 	bypassID(bypassID),
 	thresholdID(thresholdID),
@@ -49,6 +51,8 @@ CompressorBand::~CompressorBand()
 //==============================================================================
 void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
 {
+	mute = stateManager->getFloatValue(muteID);
+	isMuted = juce::approximatelyEqual(mute, 1.f);
 	prepareFilters(spec);
 	prepareCompressor(spec);
 }
@@ -56,6 +60,12 @@ void CompressorBand::prepare(const juce::dsp::ProcessSpec& spec)
 void CompressorBand::process(const juce::dsp::ProcessContextReplacing<float>& context)
 {
 	preProcess();
+
+	if (isMuted)
+	{
+		context.getOutputBlock().clear();
+		return;
+	}
 
 	// -- Filters -- even if we bypass, we need to let pass only the band part of the audio
 	for (auto& filter : filters)
@@ -100,7 +110,8 @@ void CompressorBand::prepareFilters(const juce::dsp::ProcessSpec& spec)
 
 void CompressorBand::prepareCompressor(const juce::dsp::ProcessSpec& spec)
 {
-	bypass = stateManager->getBoolValue(bypassID);
+	bypass = stateManager->getFloatValue(bypassID);
+	isBypassed = juce::approximatelyEqual(bypass, 1.f);
 	compressor.setThreshold(stateManager->getFloatValue(thresholdID));
 	compressor.setAttack(stateManager->getFloatValue(attackID));
 	compressor.setRelease(stateManager->getFloatValue(releaseID));
@@ -111,6 +122,19 @@ void CompressorBand::prepareCompressor(const juce::dsp::ProcessSpec& spec)
 //==============================================================================
 void CompressorBand::preProcess()
 {
+	// -- Mute
+	float newMute = stateManager->getCurrentValue(muteID);
+	if (!juce::approximatelyEqual(newMute, mute))
+	{
+		mute = newMute;
+		isMuted = juce::approximatelyEqual(mute, 1.f);
+	}
+
+	if (isMuted)
+	{
+		return;
+	}
+
 	preProcessFilters();
 	preProcessCompressor();
 }

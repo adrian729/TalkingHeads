@@ -77,18 +77,21 @@ enum ControlID
 	lowMidCrossoverFreq,
 	midHighCrossoverFreq,
 	// -- Low Band Compressor
+	lowBandCompressorMute,
 	lowBandCompressorBypass,
 	lowBandCompressorThreshold,
 	lowBandCompressorAttack,
 	lowBandCompressorRelease,
 	lowBandCompressorRatio,
 	// -- Mid Band Compressor
+	midBandCompressorMute,
 	midBandCompressorBypass,
 	midBandCompressorThreshold,
 	midBandCompressorAttack,
 	midBandCompressorRelease,
 	midBandCompressorRatio,
 	// -- High Band Compressor
+	highBandCompressorMute,
 	highBandCompressorBypass,
 	highBandCompressorThreshold,
 	highBandCompressorAttack,

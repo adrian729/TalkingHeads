@@ -29,6 +29,7 @@ public:
 	//==============================================================================
 	struct CompressorBandParamIDs
 	{
+		ControlID muteID;
 		ControlID bypassID;
 		ControlID thresholdID;
 		ControlID attackID;

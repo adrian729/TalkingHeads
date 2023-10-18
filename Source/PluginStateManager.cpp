@@ -820,6 +820,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 	// -- Low Band Compressor
 	addParam(
 		layout,
+		ControlID::lowBandCompressorMute,
+		"lowBandCompressorMute",
+		V1_0_0,
+		"low band mute",
+		false,
+		"",
+		SmoothingType::Linear,
+		0.01f
+	);
+
+	addParam(
+		layout,
 		ControlID::lowBandCompressorBypass,
 		"lowBandCompressorBypass",
 		V1_0_0,
@@ -880,6 +892,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 	// -- Mid Band Compressor
 	addParam(
 		layout,
+		ControlID::midBandCompressorMute,
+		"midBandCompressorMute",
+		V1_0_0,
+		"mid band mute",
+		false,
+		"",
+		SmoothingType::Linear,
+		0.01f
+	);
+
+	addParam(
+		layout,
 		ControlID::midBandCompressorBypass,
 		"midBandCompressorBypass",
 		V1_0_0,
@@ -938,6 +962,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		SmoothingType::Linear
 	);
 	// -- High Band Compressor
+	addParam(
+		layout,
+		ControlID::highBandCompressorMute,
+		"highBandCompressorMute",
+		V1_0_0,
+		"high band mute",
+		false,
+		"",
+		SmoothingType::Linear,
+		0.01f
+	);
+
 	addParam(
 		layout,
 		ControlID::highBandCompressorBypass,
