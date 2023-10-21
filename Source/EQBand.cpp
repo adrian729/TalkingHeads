@@ -13,28 +13,23 @@
 //==============================================================================
 // -- CONSTRUCTORS
 //==============================================================================
-EQBand::EQBand()
-{
-}
-
-EQBand::~EQBand()
-{
-}
-
-//==============================================================================
-void EQBand::setupEQBand(
+EQBand::EQBand(
 	std::shared_ptr<PluginStateManager> stateManager,
 	ControlID bypassID,
 	ControlID peakFreqID,
 	ControlID peakGainID,
 	ControlID peakQID
-)
+) :
+	stateManager(stateManager),
+	bypassID(bypassID),
+	peakFreqID(peakFreqID),
+	peakGainID(peakGainID),
+	peakQID(peakQID)
 {
-	this->stateManager = stateManager;
-	this->bypassID = bypassID;
-	this->peakFreqID = peakFreqID;
-	this->peakGainID = peakGainID;
-	this->peakQID = peakQID;
+}
+
+EQBand::~EQBand()
+{
 }
 
 //==============================================================================

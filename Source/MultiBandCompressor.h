@@ -15,10 +15,11 @@
 
 #pragma once
 
-#include <memory>
 #include <JuceHeader.h>
+#include <memory>
 #include "parameterTypes.h"
 #include "CompressorBand.h"
+#include "PluginStateManager.h"
 
 //==============================================================================
 class MultiBandCompressor : public juce::dsp::ProcessorBase
@@ -36,6 +37,7 @@ public:
 		ControlID releaseID;
 		ControlID ratioID;
 	};
+
 	MultiBandCompressor(
 		std::shared_ptr<PluginStateManager> stateManager,
 		ControlID bypassID,
@@ -57,27 +59,21 @@ public:
 
 private:
 	//==============================================================================
+	// --- Object parameters management and information
 	std::shared_ptr<PluginStateManager> stateManager;
 
 	ControlID bypassID{ ControlID::countParams };
+
 	// --- Object member variables
 	float bypass{ 0.f };
 	bool isBypassed{ false };
 
-	enum BandIDs
-	{
-		lowBand,
-		midBand,
-		highBand,
-		// -- Count
-		countBands
-	};
-
-	std::array<CompressorBand, BandIDs::countBands> compressorBands;
+	static const int numBands = 3;
+	std::array<CompressorBand, numBands> compressorBands;
 
 	// -- Helper variables
-	std::array<juce::AudioBuffer<float>, BandIDs::countBands> filterBuffers;
-	std::array<juce::dsp::AudioBlock<float>, BandIDs::countBands> filterBlocks;
+	std::array<juce::AudioBuffer<float>, numBands> filterBuffers;
+	std::array<juce::dsp::AudioBlock<float>, numBands> filterBlocks;
 
 	//==============================================================================
 	void preProcess();

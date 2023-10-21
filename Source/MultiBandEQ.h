@@ -24,12 +24,15 @@ public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	MultiBandEQ();
-	~MultiBandEQ();
+	struct EQBandParamIDs
+	{
+		ControlID bypassID;
+		ControlID freqID;
+		ControlID gainID;
+		ControlID qID;
+	};
 
-	//==============================================================================
-	// TODO: move setup to constructor as we did with the multiband compressor
-	void setupMultiBandEQ(
+	MultiBandEQ(
 		std::shared_ptr<PluginStateManager> stateManager,
 		// -- HPF
 		ControlID highpassBypassID,
@@ -40,15 +43,11 @@ public:
 		ControlID lowpassFreqID,
 		ControlID lowpassSlopeID,
 		// -- Band Filters
-		ControlID bandFilter1BypassID,
-		ControlID bandFilter2BypassID,
-		ControlID bandFilter3BypassID
+		EQBandParamIDs bandFilter1ParamIDs,
+		EQBandParamIDs bandFilter2ParamIDs,
+		EQBandParamIDs bandFilter3ParamIDs
 	);
-
-	//==============================================================================
-	EQBand* getFirstBandFilter();
-	EQBand* getSecondBandFilter();
-	EQBand* getThirdBandFilter();
+	~MultiBandEQ();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
@@ -74,10 +73,6 @@ private:
 	ControlID lowpassBypassID{ ControlID::countParams };
 	ControlID lowpassFreqID{ ControlID::countParams };
 	ControlID lowpassSlopeID{ ControlID::countParams };
-
-	ControlID bandFilter1BypassID{ ControlID::countParams };
-	ControlID bandFilter2BypassID{ ControlID::countParams };
-	ControlID bandFilter3BypassID{ ControlID::countParams };
 
 	//==============================================================================
 	// --- Object member variables
@@ -105,26 +100,15 @@ private:
 	Slope lowpassSlope{ Slope::Slope_12 };
 
 	//==============================================================================
-	// -- Processor Chain
-	enum chainIndex
-	{
-		highpassIndex,
-		bandFilter1Index,
-		bandFilter2Index,
-		bandFilter3Index,
-		lowpassIndex
-	};
-
 	using Filter = juce::dsp::IIR::Filter<float>;
 	using PassFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
 
-	juce::dsp::ProcessorChain<
-		PassFilter,
-		EQBand,
-		EQBand,
-		EQBand,
-		PassFilter
-	> processorChain;
+	// TODO: remove processorChain and use individual filters instead
+	PassFilter highpassFilter;
+	PassFilter lowpassFilter;
+
+	static const int numBands = 3;
+	std::array<EQBand, numBands> bandFilters;
 
 	//==============================================================================
 	// -- Filters
@@ -144,7 +128,7 @@ private:
 
 	//==============================================================================
 	void preProcess();
+
 	void postUpdateHighpassFilter();
 	void postUpdateLowpassFilter();
-	void postUpdateBandFilters();
 };

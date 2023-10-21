@@ -14,6 +14,7 @@
 #include "PluginStateManager.h"
 #include "MultiBandEQ.h"
 #include "MultiBandCompressor.h"
+#include "Imager.h"
 
 //==============================================================================
 /**
@@ -86,6 +87,9 @@ private:
 
 	//==============================================================================
 	// --- Object member variables
+	const int MONO_CHANNEL{ 0 };
+	const int LEFT_CHANNEL{ 0 };
+	const int RIGHT_CHANNEL{ 1 };
 
 	// --- stage 0: General -- Bypass ALL // Blend (dry/wet)
 	float bypass{ 0.f }; // -- using a float to smooth the bypass transition
@@ -107,7 +111,14 @@ private:
 	// -- Multi Band Compressor
 	MultiBandCompressor multiBandCompressor;
 
+	// -- Stereo Imager
+	juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoImagerDelayLine{ 192000 };
+	juce::AudioBuffer<float> stereoImagerBuffer;
+
 	// -- Multi channel stages
+
+	// -- Imager
+	Imager imager;
 
 	// -- Phaser
 	float phaserBypass{ 0.f };
@@ -121,7 +132,6 @@ private:
 
 	//==============================================================================
 	void initBlendMixer(double sampleRate, int samplesPerBlock);
-	void initMultiBandEQ(const juce::dsp::ProcessSpec& spec);
 	void initPhaser(const juce::dsp::ProcessSpec& spec);
 
 	//==============================================================================

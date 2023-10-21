@@ -14,16 +14,7 @@
 //==============================================================================
 // -- CONSTRUCTORS
 //==============================================================================
-MultiBandEQ::MultiBandEQ()
-{
-}
-
-MultiBandEQ::~MultiBandEQ()
-{
-}
-
-//==============================================================================
-void MultiBandEQ::setupMultiBandEQ(
+MultiBandEQ::MultiBandEQ(
 	std::shared_ptr<PluginStateManager> stateManager,
 	// -- HPF
 	ControlID highpassBypassID,
@@ -34,40 +25,48 @@ void MultiBandEQ::setupMultiBandEQ(
 	ControlID lowpassFreqID,
 	ControlID lowpassSlopeID,
 	// -- Band Filters
-	ControlID bandFilter1BypassID,
-	ControlID bandFilter2BypassID,
-	ControlID bandFilter3BypassID
-)
-{
-	this->stateManager = stateManager;
+	EQBandParamIDs bandFilter1ParamIDs,
+	EQBandParamIDs bandFilter2ParamIDs,
+	EQBandParamIDs bandFilter3ParamIDs
+) :
+	stateManager(stateManager),
 	// -- HPF
-	this->highpassBypassID = highpassBypassID;
-	this->highpassFreqID = highpassFreqID;
-	this->highpassSlopeID = highpassSlopeID;
+	highpassBypassID(highpassBypassID),
+	highpassFreqID(highpassFreqID),
+	highpassSlopeID(highpassSlopeID),
 	// -- LPF
-	this->lowpassBypassID = lowpassBypassID;
-	this->lowpassFreqID = lowpassFreqID;
-	this->lowpassSlopeID = lowpassSlopeID;
+	lowpassBypassID(lowpassBypassID),
+	lowpassFreqID(lowpassFreqID),
+	lowpassSlopeID(lowpassSlopeID),
 	// -- Band Filters
-	this->bandFilter1BypassID = bandFilter1BypassID;
-	this->bandFilter2BypassID = bandFilter2BypassID;
-	this->bandFilter3BypassID = bandFilter3BypassID;
+	bandFilters{
+		EQBand(
+			stateManager,
+			bandFilter1ParamIDs.bypassID,
+			bandFilter1ParamIDs.freqID,
+			bandFilter1ParamIDs.gainID,
+			bandFilter1ParamIDs.qID
+		),
+		EQBand(
+			stateManager,
+			bandFilter2ParamIDs.bypassID,
+			bandFilter2ParamIDs.freqID,
+			bandFilter2ParamIDs.gainID,
+			bandFilter2ParamIDs.qID
+		),
+		EQBand(
+			stateManager,
+			bandFilter3ParamIDs.bypassID,
+			bandFilter3ParamIDs.freqID,
+			bandFilter3ParamIDs.gainID,
+			bandFilter3ParamIDs.qID
+		)
+	}
+{
 }
 
-//==============================================================================
-EQBand* MultiBandEQ::getFirstBandFilter()
+MultiBandEQ::~MultiBandEQ()
 {
-	return &processorChain.template get<bandFilter1Index>();
-}
-
-EQBand* MultiBandEQ::getSecondBandFilter()
-{
-	return &processorChain.template get<bandFilter2Index>();
-}
-
-EQBand* MultiBandEQ::getThirdBandFilter()
-{
-	return &processorChain.template get<bandFilter3Index>();
 }
 
 //==============================================================================
@@ -76,33 +75,53 @@ void MultiBandEQ::prepare(const juce::dsp::ProcessSpec& spec)
 	sampleRate = spec.sampleRate;
 
 	// -- Highpass
+	highpassBypass = stateManager->getFloatValue(highpassBypassID);
+	highpassBypassed = juce::approximatelyEqual(highpassBypass, 1.0f);
 	highpassFreq = stateManager->getFloatValue(highpassFreqID);
 	highpassSlope = intToEnum(stateManager->getChoiceIndex(highpassSlopeID), Slope);
-
-	auto& highpass = processorChain.get<highpassIndex>();
-	updatePassFilter(highpass, makeHighpass(sampleRate), highpassSlope);
+	updatePassFilter(highpassFilter, makeHighpass(sampleRate), highpassSlope);
+	highpassFilter.prepare(spec);
 
 	// -- Lowpass
+	lowpassBypass = stateManager->getFloatValue(lowpassBypassID);
+	lowpassBypassed = juce::approximatelyEqual(lowpassBypass, 1.0f);
 	lowpassFreq = stateManager->getFloatValue(lowpassFreqID);
 	lowpassSlope = intToEnum(stateManager->getChoiceIndex(lowpassSlopeID), Slope);
+	updatePassFilter(lowpassFilter, makeLowpass(sampleRate), lowpassSlope);
+	lowpassFilter.prepare(spec);
 
-	auto& lowpass = processorChain.get<lowpassIndex>();
-	updatePassFilter(lowpass, makeLowpass(sampleRate), lowpassSlope);
-
-	// -- Chain
-	processorChain.prepare(spec);
+	// -- Bands
+	for (auto& bandFilter : bandFilters)
+	{
+		bandFilter.prepare(spec);
+	}
 }
 
 void MultiBandEQ::process(const juce::dsp::ProcessContextReplacing<float>& context)
 {
 	preProcess();
-
-	processorChain.process(context);
+	if (!highpassBypassed)
+	{
+		highpassFilter.process(context);
+	}
+	if (!lowpassBypassed)
+	{
+		lowpassFilter.process(context);
+	}
+	for (auto& bandFilter : bandFilters)
+	{
+		bandFilter.process(context);
+	}
 }
 
 void MultiBandEQ::reset()
 {
-	processorChain.reset();
+	highpassFilter.reset();
+	lowpassFilter.reset();
+	for (auto& bandFilter : bandFilters)
+	{
+		bandFilter.reset();
+	}
 }
 
 //==============================================================================
@@ -110,7 +129,6 @@ void MultiBandEQ::preProcess()
 {
 	postUpdateHighpassFilter();
 	postUpdateLowpassFilter();
-	postUpdateBandFilters();
 }
 
 void MultiBandEQ::postUpdateHighpassFilter()
@@ -119,7 +137,6 @@ void MultiBandEQ::postUpdateHighpassFilter()
 	bool bypassChanged = juce::approximatelyEqual(newBypass, highpassBypass);
 	highpassBypass = newBypass;
 	highpassBypassed = juce::approximatelyEqual(highpassBypass, 1.0f);
-	processorChain.template setBypassed<highpassIndex>(highpassBypassed);
 	if (highpassBypassed)
 	{
 		return;
@@ -136,9 +153,7 @@ void MultiBandEQ::postUpdateHighpassFilter()
 	{
 		highpassFreq = newFreq;
 		highpassSlope = newSlope;
-
-		auto& highpass = processorChain.template get<highpassIndex>();
-		updatePassFilter(highpass, makeHighpass(sampleRate), highpassSlope);
+		updatePassFilter(highpassFilter, makeHighpass(sampleRate), highpassSlope);
 	}
 }
 
@@ -148,7 +163,6 @@ void MultiBandEQ::postUpdateLowpassFilter()
 	bool bypassChanged = juce::approximatelyEqual(newBypass, lowpassBypass);
 	lowpassBypass = newBypass;
 	lowpassBypassed = juce::approximatelyEqual(lowpassBypass, 1.0f);
-	processorChain.template setBypassed<lowpassIndex>(lowpassBypassed);
 	if (lowpassBypassed)
 	{
 		return;
@@ -164,35 +178,8 @@ void MultiBandEQ::postUpdateLowpassFilter()
 	{
 		lowpassFreq = newFreq;
 		lowpassSlope = newSlope;
-
-		auto& lowpass = processorChain.template get<lowpassIndex>();
-		updatePassFilter(lowpass, makeLowpass(sampleRate), lowpassSlope);
+		updatePassFilter(lowpassFilter, makeLowpass(sampleRate), lowpassSlope);
 	}
-}
-
-void MultiBandEQ::postUpdateBandFilters()
-{
-	// -- Band Filter 1
-	bool bandFilter1Bypass = juce::approximatelyEqual(
-		stateManager->getCurrentValue(bandFilter1BypassID),
-		1.f
-	);
-	processorChain.template setBypassed<bandFilter1Index>(bandFilter1Bypass);
-
-	// -- Band Filter 2
-	bool bandFilter2Bypass = juce::approximatelyEqual(
-		stateManager->getCurrentValue(bandFilter2BypassID),
-		1.f
-	);
-	processorChain.template setBypassed<bandFilter2Index>(bandFilter2Bypass);
-
-
-	// -- Band Filter 3
-	bool bandFilter3Bypass = juce::approximatelyEqual(
-		stateManager->getCurrentValue(bandFilter3BypassID),
-		1.f
-	);
-	processorChain.template setBypassed<bandFilter3Index>(bandFilter3Bypass);
 }
 
 float MultiBandEQ::getLatency()

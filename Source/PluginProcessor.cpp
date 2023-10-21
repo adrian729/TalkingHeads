@@ -22,8 +22,10 @@ TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor() :
 	multiBandCompressor(
 		stateManager,
 		ControlID::compressorBypass,
+		// -- Crossover frequencies
 		ControlID::lowMidCrossoverFreq,
 		ControlID::midHighCrossoverFreq,
+		// -- Compressor bands
 		{
 			ControlID::lowBandCompressorMute,
 			ControlID::lowBandCompressorBypass,
@@ -48,6 +50,45 @@ TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor() :
 			ControlID::highBandCompressorRelease,
 			ControlID::highBandCompressorRatio
 		}
+	),
+	multiBandEQ(
+		stateManager,
+		// -- HPF
+		ControlID::highpassBypass,
+		ControlID::highpassFreq,
+		ControlID::highpassSlope,
+		// -- LPF
+		ControlID::lowpassBypass,
+		ControlID::lowpassFreq,
+		ControlID::lowpassSlope,
+		// -- Band Filters
+		{
+			ControlID::bandFilter1Bypass,
+			ControlID::bandFilter1PeakFreq,
+			ControlID::bandFilter1PeakGain,
+			ControlID::bandFilter1PeakQ
+		},
+		{
+			ControlID::bandFilter2Bypass,
+			ControlID::bandFilter2PeakFreq,
+			ControlID::bandFilter2PeakGain,
+			ControlID::bandFilter2PeakQ
+		},
+		{
+			ControlID::bandFilter3Bypass,
+			ControlID::bandFilter3PeakFreq,
+			ControlID::bandFilter3PeakGain,
+			ControlID::bandFilter3PeakQ
+		}
+	),
+	imager(
+		stateManager,
+		ControlID::imagerBypass,
+		ControlID::imagerOriginalGain,
+		ControlID::imagerAuxiliarGain,
+		ControlID::imagerWidth,
+		ControlID::imagerCenter,
+		ControlID::imagerDelayTime
 	)
 {
 }
@@ -147,10 +188,14 @@ void TalkingHeadsPluginAudioProcessor::prepareToPlay(double sampleRate, int samp
 	preGain.prepare(monoSpec);
 
 	// -- multi EQ
-	initMultiBandEQ(monoSpec);
+	multiBandEQ.setSampleRate(monoSpec.sampleRate);
+	multiBandEQ.prepare(monoSpec);
 
 	// -- multi Compressor
 	multiBandCompressor.prepare(monoSpec);
+
+	// -- Stereo Imager
+	imager.prepare(monoSpec);
 
 	// -- phaser
 	initPhaser(multiSpec);
@@ -218,12 +263,6 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 	{
 		// -- create the audio blocks and context
 		juce::dsp::AudioBlock<float> audioBlock(buffer);
-		auto monoBlock = audioBlock.getSingleChannelBlock(0); // -- get the mono block
-
-		// TODO: change so that we work with a mono block/context in the first stages, 
-		// and then check how we convert to stereo-stereo after we are done with that
-		// OR separate in different blocks/context/buffers for each voice before we mix them and apply last stages
-
 		juce::dsp::ProcessContextReplacing<float> context(audioBlock);
 
 		//const auto& inputBlock = context.getInputBlock();
@@ -234,17 +273,15 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 		blendMixer.pushDrySamples(createDryBlock(buffer, totalNumOutputChannels, numSamples));
 
 		// -- Process mono stages
+		auto monoBlock = audioBlock.getSingleChannelBlock(0); // -- get the mono block
 		juce::dsp::ProcessContextReplacing<float> monoContext(monoBlock);
+
 		preGain.process(monoContext);
 		multiBandEQ.process(monoContext);
 		multiBandCompressor.process(monoContext);
-		// TODO: check bypassing of processors is done internally in the processor or implement it if necessary
 
-		// -- Mono to stereo -- copy the mono channel to all output channels
-		for (int i{ 1 }; i < totalNumOutputChannels; i++)
-		{
-			outputBlock.getSingleChannelBlock(i).copyFrom(monoBlock);
-		}
+		// -- Mono to stereo -- context right now has audio only in the mono channel, the imager will transform it to stereo and add width
+		imager.process(context);
 
 		// -- Process multi channel stages
 		if (!isPhaserBypassed)
@@ -297,6 +334,7 @@ void TalkingHeadsPluginAudioProcessor::reset()
 	preGain.reset();
 	multiBandEQ.reset();
 	multiBandCompressor.reset();
+	imager.reset();
 	phaser.reset();
 }
 
@@ -426,52 +464,6 @@ void  TalkingHeadsPluginAudioProcessor::initBlendMixer(double sampleRate, int sa
 
 	blendMixerBuffer.setSize(totalNumOutputChannels, samplesPerBlock); // -- allocate space
 	blendMixerBuffer.clear();
-}
-
-void TalkingHeadsPluginAudioProcessor::initMultiBandEQ(const juce::dsp::ProcessSpec& spec)
-{
-	multiBandEQ.setupMultiBandEQ(
-		stateManager,
-		// -- HPF
-		ControlID::highpassBypass,
-		ControlID::highpassFreq,
-		ControlID::highpassSlope,
-		// -- LPF
-		ControlID::lowpassBypass,
-		ControlID::lowpassFreq,
-		ControlID::lowpassSlope,
-		// -- Band Filters
-		ControlID::bandFilter1Bypass,
-		ControlID::bandFilter2Bypass,
-		ControlID::bandFilter3Bypass
-	);
-	// -- band filter 1
-	multiBandEQ.getFirstBandFilter()->setupEQBand(
-		stateManager,
-		ControlID::bandFilter1Bypass,
-		ControlID::bandFilter1PeakFreq,
-		ControlID::bandFilter1PeakGain,
-		ControlID::bandFilter1PeakQ
-	);
-	// -- band filter 2
-	multiBandEQ.getSecondBandFilter()->setupEQBand(
-		stateManager,
-		ControlID::bandFilter2Bypass,
-		ControlID::bandFilter2PeakFreq,
-		ControlID::bandFilter2PeakGain,
-		ControlID::bandFilter2PeakQ
-	);
-	// -- band filter 3
-	multiBandEQ.getThirdBandFilter()->setupEQBand(
-		stateManager,
-		ControlID::bandFilter3Bypass,
-		ControlID::bandFilter3PeakFreq,
-		ControlID::bandFilter3PeakGain,
-		ControlID::bandFilter3PeakQ
-	);
-
-	multiBandEQ.setSampleRate(spec.sampleRate);
-	multiBandEQ.prepare(spec);
 }
 
 //==============================================================================

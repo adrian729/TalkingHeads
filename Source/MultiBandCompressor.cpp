@@ -112,19 +112,20 @@ void MultiBandCompressor::process(const juce::dsp::ProcessContextReplacing<float
 
 	for (juce::AudioBuffer<float>& buffer : filterBuffers)
 	{
+		buffer.clear();
 		for (int channel{ 0 }; channel < inputBlock.getNumChannels(); ++channel)
 		{
-			buffer.copyFrom(channel, 0, inputBlock.getChannelPointer(channel), buffer.getNumSamples());
+			buffer.copyFrom(channel, 0, inputBlock.getChannelPointer(channel), outputBlock.getNumSamples()); // TODO: buffer size is maxNumSamples, not numSamples. Check how we create audioBlocks with only numSamples
 		}
 	}
 
-	for (int i{ 0 }; i < BandIDs::countBands; ++i)
+	for (int i{ 0 }; i < numBands; ++i)
 	{
 		filterBlocks[i] = juce::dsp::AudioBlock<float>(filterBuffers[i]);
 	}
 
 	// -- Process each band
-	for (int i{ 0 }; i < BandIDs::countBands; ++i)
+	for (int i{ 0 }; i < numBands; ++i)
 	{
 		juce::dsp::ProcessContextReplacing<float> bandContext(filterBlocks[i]);
 		compressorBands[i].process(bandContext);

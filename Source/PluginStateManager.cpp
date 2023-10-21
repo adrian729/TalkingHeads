@@ -512,12 +512,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 
 	//==============================================================================
 	// -- ranges
-	auto gainRange = juce::NormalisableRange<float>(-24.f, 24.f, 0.01f);
-	auto freqRange = juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.198893842f);
-	auto filterQRange = juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f);
+	auto gainRange = juce::NormalisableRange<float>(-24.f, 24.f, .01f);
+	auto freqRange = juce::NormalisableRange<float>(20.f, 20000.f, 1.f, .198893842f);
+	auto filterQRange = juce::NormalisableRange<float>(.1f, 10.f, .05f, 1.f);
 	auto thresholdRange = juce::NormalisableRange<float>(-60.f, 24.f, 1.f, 1.f);
 	auto attackReleaseRange = juce::NormalisableRange<float>(5.f, 500.f, 1.f, 1.f);
-	auto ratioRange = juce::NormalisableRange<float>(1.f, 100.f, 0.1f, 0.4f);
+	auto ratioRange = juce::NormalisableRange<float>(1.f, 100.f, .1f, .4f);
 
 	//==============================================================================
 	// -- choices
@@ -541,7 +541,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 	// -- Blend (dry/wet)
 	addParam(
@@ -550,7 +550,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		"blend",
 		V1_0_0,
 		"blend",
-		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
+		juce::NormalisableRange<float>(0.f, 1.f, .01f),
 		1.f,
 		"",
 		SmoothingType::Linear
@@ -580,7 +580,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -613,7 +613,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -646,7 +646,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -694,7 +694,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -742,7 +742,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -791,7 +791,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 	// -- Multi Band Compressor
 	addParam(
@@ -800,7 +800,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		"lowMidCrossoverFreq",
 		V1_0_0,
 		"low-mid crossover freq",
-		juce::NormalisableRange<float>(20.f, 999.f, 1.f, 0.198893842f),
+		juce::NormalisableRange<float>(20.f, 999.f, 1.f, .198893842f),
 		400.f,
 		"Hz",
 		SmoothingType::Linear
@@ -812,7 +812,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		"midHighCrossoverFreq",
 		V1_0_0,
 		"mid-high crossover freq",
-		juce::NormalisableRange<float>(1000.f, 20000.f, 1.f, 0.198893842f),
+		juce::NormalisableRange<float>(1000.f, 20000.f, 1.f, .198893842f),
 		2000.f,
 		"Hz",
 		SmoothingType::Linear
@@ -827,7 +827,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -839,7 +839,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -899,7 +899,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -911,7 +911,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -971,7 +971,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -983,7 +983,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		false,
 		"",
 		SmoothingType::Linear,
-		0.01f
+		.01f
 	);
 
 	addParam(
@@ -1035,6 +1035,81 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 	);
 
 	//==============================================================================
+	// -- Imager
+	addParam(
+		layout,
+		ControlID::imagerBypass,
+		"imagerBypass",
+		V1_0_0,
+		"imager bypass",
+		false,
+		"",
+		SmoothingType::Linear,
+		.01f
+	);
+
+	addParam(
+		layout,
+		ControlID::imagerOriginalGain,
+		"imagerOriginalGain",
+		V1_0_0,
+		"imager original gain",
+		juce::NormalisableRange<float>(0.f, 2.f, .001f),
+		1.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	addParam(
+		layout,
+		ControlID::imagerAuxiliarGain,
+		"imagerAuxiliarGain",
+		V1_0_0,
+		"imager aux gain",
+		juce::NormalisableRange<float>(0.f, 2.f, .001f),
+		1.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	addParam(
+		layout,
+		ControlID::imagerWidth,
+		"imagerWidth",
+		V1_0_0,
+		"imager width",
+		juce::NormalisableRange<float>(-1.f, 1.f, .001f),
+		.5f,
+		"",
+		SmoothingType::Linear
+	);
+
+	addParam(
+		layout,
+		ControlID::imagerCenter,
+		"imagerCenter",
+		V1_0_0,
+		"imager center",
+		juce::NormalisableRange<float>(-1.f, 1.f, .001f),
+		0.f,
+		"",
+		SmoothingType::Linear
+	);
+
+	addParam(
+		layout,
+		ControlID::imagerDelayTime,
+		"imagerDelayTime",
+		V1_0_0,
+		"imager delay time",
+		juce::NormalisableRange<float>(0.f, 50.f, .001f, .7f),
+		4.f,
+		"ms",
+		SmoothingType::Linear
+	);
+
+
+	//==============================================================================
 	// -- Phaser
 	addParam(
 		layout,
@@ -1056,7 +1131,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		"phaserRate",
 		V1_0_0,
 		"phaser rate",
-		juce::NormalisableRange<float>(0.f, 99.999f, 0.001f, 0.35f), // TODO: check skew factor
+		juce::NormalisableRange<float>(0.f, 99.999f, .001f, .35f), // TODO: check skew factor
 		1.f,
 		"",
 		SmoothingType::Linear
@@ -1069,8 +1144,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		"phaserDepth",
 		V1_0_0,
 		"phaser depth",
-		juce::NormalisableRange<float>(0.f, 1.f, 0.001f, 0.5f),
-		0.5f,
+		juce::NormalisableRange<float>(0.f, 1.f, .001f, .5f),
+		.5f,
 		"",
 		SmoothingType::Linear
 	);
@@ -1109,8 +1184,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		"phaserMix",
 		V1_0_0,
 		"phaser mix",
-		juce::NormalisableRange<float>(0.f, 1.f, 0.01f),
-		0.5f,
+		juce::NormalisableRange<float>(0.f, 1.f, .01f),
+		.5f,
 		"",
 		SmoothingType::Linear
 	);

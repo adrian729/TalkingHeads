@@ -98,6 +98,14 @@ enum ControlID
 	highBandCompressorRelease,
 	highBandCompressorRatio,
 
+	// -- Imager
+	imagerBypass,
+	imagerOriginalGain,
+	imagerAuxiliarGain,
+	imagerWidth,
+	imagerCenter,
+	imagerDelayTime,
+
 	// -- Phaser
 	phaserBypass,
 	phaserRate,

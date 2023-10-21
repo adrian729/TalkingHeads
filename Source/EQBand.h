@@ -21,17 +21,14 @@ public:
 	//==============================================================================
 	// -- CONSTRUCTORS
 	//==============================================================================
-	EQBand();
-	~EQBand();
-
-	//==============================================================================
-	void setupEQBand(
+	EQBand(
 		std::shared_ptr<PluginStateManager> stateManager,
 		ControlID bypassID,
 		ControlID peakFreqID,
 		ControlID peakGainID,
 		ControlID peakQID
 	);
+	~EQBand();
 
 	//==============================================================================
 	void prepare(const juce::dsp::ProcessSpec& spec) override;
