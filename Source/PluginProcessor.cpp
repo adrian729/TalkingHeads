@@ -88,7 +88,9 @@ TalkingHeadsPluginAudioProcessor::TalkingHeadsPluginAudioProcessor() :
 		ControlID::imagerAuxiliarGain,
 		ControlID::imagerWidth,
 		ControlID::imagerCenter,
-		ControlID::imagerDelayTime
+		ControlID::imagerDelayTime,
+		ControlID::imagerCrossoverFreq,
+		ControlID::imagerType
 	)
 {
 }

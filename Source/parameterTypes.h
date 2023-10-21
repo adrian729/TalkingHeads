@@ -105,6 +105,8 @@ enum ControlID
 	imagerWidth,
 	imagerCenter,
 	imagerDelayTime,
+	imagerCrossoverFreq,
+	imagerType,
 
 	// -- Phaser
 	phaserBypass,

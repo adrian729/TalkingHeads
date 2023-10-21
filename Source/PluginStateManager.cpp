@@ -1108,6 +1108,27 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginStateManager::initPara
 		SmoothingType::Linear
 	);
 
+	addParam(
+		layout,
+		ControlID::imagerCrossoverFreq,
+		"imagerCrossoverFreq",
+		V1_0_0,
+		"imager crossover freq",
+		freqRange,
+		300.f,
+		"Hz",
+		SmoothingType::Linear
+	);
+
+	juce::StringArray imagerTypeChoices{ "Haas", "Haas - mono cancelation", "Haas - mid/side processing" };
+	addParam(
+		layout,
+		ControlID::imagerType,
+		"imagerType",
+		V1_0_0,
+		"imager type",
+		imagerTypeChoices
+	);
 
 	//==============================================================================
 	// -- Phaser

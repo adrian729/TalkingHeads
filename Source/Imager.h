@@ -9,11 +9,19 @@
 
 	Adding stereo space to mono audio using Haas effect:
 
-	1. Create auxiliar buffer as a copy of the input buffer
-	2. Pan original and auxiliar buffers (preferably to opposite directions)
-	3. Delay auxiliar buffer (between 2 and 50 ms)
-	4. Change gain of original and auxiliar buffers
+	1st approach:
+	- Create auxiliar signal with 2-50ms delay
+	- Pan original and auxiliar signals to opposite directions
+	- Play with panning/level of the signals
+	* width: pan distance between both signals/center: panning center/gain: gain for each signal/delay time: delay time for auxiliar signal
 
+	2nd approach:
+	- Keep original signal in center
+	- Create auxiliar signal with 2-50ms delay
+	- Add auxiliar signal to left/right channels but with inverted phase
+	* This way, the center is kept and the stereo field is widened. Also when the signal is summed to mono, the auxiliar signal is cancelled out
+
+	3rd approach: play with mid-side processing (still need to check)
 
 	Mid-side processing to add width:
 	'width' is the stretch factor of the stereo field:
@@ -55,7 +63,9 @@ public:
 		ControlID auxiliarGainID,
 		ControlID widthID,
 		ControlID centerID,
-		ControlID delayTimeID
+		ControlID delayTimeID,
+		ControlID crossoverFreqID,
+		ControlID imagerTypeID
 	);
 	~Imager();
 
@@ -84,6 +94,12 @@ private:
 		countSignals
 	};
 
+	enum StereoIDs
+	{
+		left,
+		right
+	};
+
 	// --- Object parameters management and information
 	std::shared_ptr<PluginStateManager> stateManager;
 
@@ -92,6 +108,8 @@ private:
 	ControlID widthID{ ControlID::countParams };
 	ControlID centerID{ ControlID::countParams };
 	ControlID delayTimeID{ ControlID::countParams };
+	ControlID crossoverFreqID{ ControlID::countParams };
+	ControlID imagerTypeID{ ControlID::countParams };
 
 	//==============================================================================
 	// --- Object member variables
@@ -99,6 +117,8 @@ private:
 
 	float bypass{ 0.f };
 	float isBypassed{ false };
+
+	// -- Imager
 	std::array<float, SignalIDs::countSignals> gains{ 0.5f, 0.5f };
 	float width{ 0.f };
 	float center{ 0.f };
@@ -106,6 +126,33 @@ private:
 	float delayTime{ 0.f };
 
 	juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> stereoImagerDelayLine{ 192000 };
+
+	// -- Crossover -- allows to define from which freq the imager widens the stereo field
+	float crossoverFreq{ 0.f };
+
+	enum FilterIDs
+	{
+		lowpass,
+		highpass,
+		//==============================================================================
+		countFilters
+	};
+
+	using Filter = juce::dsp::LinkwitzRileyFilter<float>;
+	std::array<Filter, FilterIDs::countFilters> filters;
+	juce::AudioBuffer<float> lowpassBuffer;
+	juce::dsp::AudioBlock<float> lowpassBlock;
+
+	enum ImagerTypes
+	{
+		haas,
+		haasMono,
+		haasMidSide,
+		//==============================================================================
+		countImagerTypes
+	};
+
+	ImagerTypes imagerType{ ImagerTypes::countImagerTypes };
 
 	//==============================================================================
 	float getDelayTimeInSamples();
