@@ -197,13 +197,13 @@ void TalkingHeadsPluginAudioProcessor::prepareToPlay(double sampleRate, int samp
 	multiBandCompressor.prepare(monoSpec);
 
 	// -- Stereo Imager
-	imager.prepare(monoSpec);
+	imager.prepare(multiSpec);
 
 	// -- phaser
 	initPhaser(multiSpec);
 
 	// -- Setup smoothing
-	stateManager->resetSmoothedValues(sampleRate);
+	stateManager->initSmoothedValues(sampleRate);
 }
 
 void TalkingHeadsPluginAudioProcessor::initPhaser(const juce::dsp::ProcessSpec& spec)
@@ -295,7 +295,6 @@ void TalkingHeadsPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& bu
 		blendMixer.mixWetSamples(outputBlock);
 	}
 
-	// TODO: we will need to convert mono to stereo later when adding space (panning etc)
 	postProcessBlock();
 }
 

@@ -162,6 +162,15 @@ int PluginStateManager::getIntValue(ControlID controlID)
 }
 
 // -- Smoothing
+void PluginStateManager::initSmoothedValues(double sampleRate)
+{
+	resetSmoothedValues(sampleRate);
+	for (int i{ 0 }; i < ControlID::countParams; i++)
+	{
+		setCurrentAndTargetValue(intToEnum(i, ControlID), parameters[i]->getFloatValue());
+	}
+}
+
 void PluginStateManager::resetSmoothedValues(double sampleRate)
 {
 	for (auto& smoothedValue : linearSmoothedValues)

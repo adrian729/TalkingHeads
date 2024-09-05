@@ -50,6 +50,7 @@ public:
 	int getIntValue(ControlID controlID);
 
 	// -- Smoothing
+	void initSmoothedValues(double sampleRate);
 	void resetSmoothedValues(double sampleRate);
 	void reset(ControlID controlID, double sampleRate, double rampLengthInSeconds = 0.005f);
 
