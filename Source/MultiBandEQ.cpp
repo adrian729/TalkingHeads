@@ -228,7 +228,7 @@ void MultiBandEQ::update(PassFilter& filter, const CoefficientType& coefficients
 }
 
 template <typename CoefficientType>
-void MultiBandEQ::updatePassFilter(PassFilter& filter, CoefficientType& coefficients, const Slope& slope)
+void MultiBandEQ::updatePassFilter(PassFilter& filter, const CoefficientType& coefficients, const Slope& slope)
 {
 	filter.template setBypassed<Slope::Slope_12>(true);
 	filter.template setBypassed<Slope::Slope_24>(true);

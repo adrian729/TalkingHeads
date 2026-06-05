@@ -124,7 +124,7 @@ private:
 	void update(PassFilter& filter, const CoefficientType& coefficients);
 
 	template <typename CoefficientType>
-	void updatePassFilter(PassFilter& passFilter, CoefficientType& coefficients, const Slope& cutSlope);
+	void updatePassFilter(PassFilter& passFilter, const CoefficientType& coefficients, const Slope& cutSlope);
 
 	//==============================================================================
 	void preProcess();
